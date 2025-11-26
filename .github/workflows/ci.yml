@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Install bd (beads CLI)
+        run: go install github.com/steveyegge/beads/cmd/bd@latest
+
+      - name: Initialize beads database
+        run: bd init
+
+      - name: Create test AGENTS.md
+        run: |
+          mkdir -p /tmp/test-agents
+          echo "# Test AGENTS.md for CI" > /tmp/test-agents/AGENTS.md
+          echo "This is a test file for CI" >> /tmp/test-agents/AGENTS.md
+
+      - name: Create test beads with dependencies
+        run: |
+          BEAD1=$(bd create --title "Test task 1" --priority P1 --type task --description "A test task for CI" --json | jq -r '.id')
+          BEAD2=$(bd create --title "Test bug fix" --priority P2 --type bug --description "A test bug for CI" --json | jq -r '.id')
+          bd create --title "Test feature" --priority P3 --type feature --description "A test feature for CI" --deps "blocks:$BEAD1"
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...

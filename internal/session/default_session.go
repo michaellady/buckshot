@@ -12,23 +12,25 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/michaellady/buckshot/internal/agent"
 )
 
 // DefaultSession implements the Session interface using an underlying agent CLI process.
 type DefaultSession struct {
-	agent         agent.Agent
-	cmd           *exec.Cmd
-	stdin         io.WriteCloser
-	stdout        io.ReadCloser
-	stderr        io.ReadCloser
-	contextUsage  float64
-	alive         bool
-	mu            sync.Mutex
-	agentsPath    string
-	started       bool
-	outputBuffer  strings.Builder
+	agent          agent.Agent
+	cmd            *exec.Cmd
+	stdin          io.WriteCloser
+	stdout         io.ReadCloser
+	stderr         io.ReadCloser
+	contextUsage   float64
+	alive          bool
+	mu             sync.Mutex
+	agentsPath     string
+	started        bool
+	outputBuffer   strings.Builder
+	responseSignal chan struct{} // Signals when context usage is updated (response complete)
 }
 
 // Start initializes the session with the path to AGENTS.md.
@@ -77,6 +79,7 @@ func (s *DefaultSession) Start(ctx context.Context, agentsPath string) error {
 
 	s.alive = true
 	s.started = true
+	s.responseSignal = make(chan struct{}, 1) // Buffered to avoid blocking
 
 	// Start goroutines to read output
 	go s.readOutput(s.stdout)
@@ -121,6 +124,12 @@ func (s *DefaultSession) readOutput(pipe io.ReadCloser) {
 		// Parse context usage from output
 		if usage := parseContextUsage(line); usage >= 0 {
 			s.contextUsage = usage
+			// Signal that we received a context update (indicates response complete)
+			select {
+			case s.responseSignal <- struct{}{}:
+			default:
+				// Channel full, signal already pending
+			}
 		}
 		s.mu.Unlock()
 	}
@@ -140,6 +149,9 @@ func parseContextUsage(line string) float64 {
 	return -1.0
 }
 
+// SendTimeout is the default timeout for waiting for agent responses.
+const SendTimeout = 120 * time.Second
+
 // Send sends a prompt to the agent and returns the response.
 func (s *DefaultSession) Send(ctx context.Context, prompt string) (Response, error) {
 	s.mu.Lock()
@@ -152,8 +164,12 @@ func (s *DefaultSession) Send(ctx context.Context, prompt string) (Response, err
 		return Response{}, errors.New("session not alive")
 	}
 
-	// Clear output buffer before sending
+	// Clear output buffer and drain any pending signals before sending
 	s.outputBuffer.Reset()
+	select {
+	case <-s.responseSignal:
+	default:
+	}
 	s.mu.Unlock()
 
 	// Write prompt to stdin
@@ -165,9 +181,15 @@ func (s *DefaultSession) Send(ctx context.Context, prompt string) (Response, err
 		return Response{Error: fmt.Errorf("failed to send prompt: %w", err)}, err
 	}
 
-	// Wait for response (in real implementation, we'd wait for a proper delimiter)
-	// For now, we'll simulate a small delay to let output accumulate
-	// In production, we'd parse JSON stream or look for specific markers
+	// Wait for response signal (context usage update) or timeout
+	select {
+	case <-s.responseSignal:
+		// Response received
+	case <-time.After(SendTimeout):
+		// Timeout - return whatever we have
+	case <-ctx.Done():
+		return Response{Error: ctx.Err()}, ctx.Err()
+	}
 
 	// Get output
 	s.mu.Lock()
@@ -267,10 +289,11 @@ func (m *DefaultManager) CreateSession(agent agent.Agent) (Session, error) {
 	}
 
 	return &DefaultSession{
-		agent:        agent,
-		contextUsage: 0.0,
-		alive:        false,
-		started:      false,
+		agent:          agent,
+		contextUsage:   0.0,
+		alive:          false,
+		started:        false,
+		responseSignal: nil, // Will be initialized in Start()
 	}, nil
 }
 
