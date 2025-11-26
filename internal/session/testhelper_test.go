@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/michaellady/buckshot/internal/agent"
 )
 
 // setupMockClaude creates a mock claude binary for testing.
@@ -38,56 +40,33 @@ done
 	return mockPath
 }
 
-// createMockClaudeAt creates a mock claude at a specific path for testing.
-func createMockClaudeAt(path string) error {
-	mockScript := `#!/bin/bash
-echo "Mock Claude started"
-echo "Context: 1% used (2000/200000 tokens)"
-while IFS= read -r line; do
-    if [[ -n "$line" ]]; then
-        echo "Mock response: $line"
-        echo "Context: 10% used (20000/200000 tokens)"
-    fi
-done
-`
-
-	// Create parent directory if it doesn't exist
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+// newTestAgent creates an agent.Agent for testing with the correct path.
+// It detects the actual claude binary location on the system.
+func newTestAgent() agent.Agent {
+	return agent.Agent{
+		Name:          "claude",
+		Path:          mockClaudePath(),
+		Authenticated: true,
+		Version:       "1.0.0",
+		Pattern:       agent.KnownAgents()["claude"],
 	}
-
-	return os.WriteFile(path, []byte(mockScript), 0755)
 }
 
-// TestMain runs before all tests in the package.
-func TestMain(m *testing.M) {
-	// Try to create a symlink from /usr/bin/claude to the real claude
-	// This allows tests to work without modification
-	realClaudePath, err := exec.LookPath("claude")
-	if err == nil && realClaudePath != "/usr/bin/claude" {
-		// Found claude at a different path, try to create symlink
-		// This will fail if we don't have permissions, which is fine
-		_ = os.Symlink(realClaudePath, "/usr/bin/claude")
-	}
-
-	// If we still don't have /usr/bin/claude, create a mock
-	if _, err := os.Stat("/usr/bin/claude"); os.IsNotExist(err) {
-		_ = createMockClaudeAt("/usr/bin/claude")
-	}
-
-	// Run tests
-	code := m.Run()
-
-	// Note: We don't cleanup /usr/bin/claude as we may not have created it
-	// and removing it could break the system
-
-	os.Exit(code)
+// newUnauthenticatedTestAgent creates an unauthenticated agent for testing.
+func newUnauthenticatedTestAgent() agent.Agent {
+	a := newTestAgent()
+	a.Authenticated = false
+	return a
 }
 
 // mockClaudePath returns the path to use for mock claude in tests.
 func mockClaudePath() string {
 	if path := os.Getenv("TEST_MOCK_CLAUDE"); path != "" {
+		return path
+	}
+
+	// First try exec.LookPath to find claude in PATH
+	if path, err := exec.LookPath("claude"); err == nil {
 		return path
 	}
 
@@ -97,7 +76,7 @@ func mockClaudePath() string {
 		"/usr/local/bin/claude",
 		"/usr/bin/claude",
 	} {
-		if _, err := exec.LookPath(path); err == nil {
+		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}

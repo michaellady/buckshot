@@ -3,8 +3,6 @@ package session
 import (
 	"context"
 	"testing"
-
-	"github.com/michaellady/buckshot/internal/agent"
 )
 
 // TestSessionInterface ensures Session interface is properly defined
@@ -21,17 +19,8 @@ func TestManagerInterface(t *testing.T) {
 
 // TestSessionStart tests that Start initializes session with AGENTS.md path
 func TestSessionStart(t *testing.T) {
-	// Create a mock agent
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -53,16 +42,8 @@ func TestSessionStart(t *testing.T) {
 
 // TestSessionStartWithInvalidPath tests Start with non-existent AGENTS.md
 func TestSessionStartWithInvalidPath(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -77,16 +58,8 @@ func TestSessionStartWithInvalidPath(t *testing.T) {
 
 // TestSessionSend tests sending a prompt and receiving a response
 func TestSessionSend(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -122,16 +95,8 @@ func TestSessionSend(t *testing.T) {
 
 // TestSessionSendWithoutStart tests that Send fails if Start not called
 func TestSessionSendWithoutStart(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -146,16 +111,8 @@ func TestSessionSendWithoutStart(t *testing.T) {
 
 // TestSessionContextUsage tests that ContextUsage returns 0.0-1.0
 func TestSessionContextUsage(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -196,16 +153,8 @@ func TestSessionContextUsage(t *testing.T) {
 
 // TestSessionIsAlive tests session lifecycle checks
 func TestSessionIsAlive(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -238,16 +187,8 @@ func TestSessionIsAlive(t *testing.T) {
 
 // TestSessionClose tests clean termination
 func TestSessionClose(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -273,16 +214,9 @@ func TestSessionClose(t *testing.T) {
 
 // TestSessionAgent tests getting the underlying agent
 func TestSessionAgent(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
+	testAgent := newTestAgent()
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(testAgent)
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -290,26 +224,18 @@ func TestSessionAgent(t *testing.T) {
 
 	// Agent() should return the same agent
 	returnedAgent := sess.Agent()
-	if returnedAgent.Name != mockAgent.Name {
-		t.Errorf("Agent().Name = %q, want %q", returnedAgent.Name, mockAgent.Name)
+	if returnedAgent.Name != testAgent.Name {
+		t.Errorf("Agent().Name = %q, want %q", returnedAgent.Name, testAgent.Name)
 	}
-	if returnedAgent.Path != mockAgent.Path {
-		t.Errorf("Agent().Path = %q, want %q", returnedAgent.Path, mockAgent.Path)
+	if returnedAgent.Path != testAgent.Path {
+		t.Errorf("Agent().Path = %q, want %q", returnedAgent.Path, testAgent.Path)
 	}
 }
 
 // TestManagerCreateSession tests session creation
 func TestManagerCreateSession(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Errorf("CreateSession() error = %v", err)
 	}
@@ -321,16 +247,8 @@ func TestManagerCreateSession(t *testing.T) {
 
 // TestManagerCreateSessionWithUnauthenticatedAgent tests that creation fails for unauthenticated agent
 func TestManagerCreateSessionWithUnauthenticatedAgent(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: false, // Not authenticated
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	_, err := mgr.CreateSession(mockAgent)
+	_, err := mgr.CreateSession(newUnauthenticatedTestAgent())
 	if err == nil {
 		t.Error("CreateSession() with unauthenticated agent should return error, got nil")
 	}
@@ -338,16 +256,8 @@ func TestManagerCreateSessionWithUnauthenticatedAgent(t *testing.T) {
 
 // TestManagerShouldRespawn tests context threshold checking
 func TestManagerShouldRespawn(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -382,16 +292,8 @@ func TestManagerShouldRespawn(t *testing.T) {
 
 // TestSessionPersistence tests that sessions persist if context < 50%
 func TestSessionPersistence(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -427,16 +329,8 @@ func TestSessionPersistence(t *testing.T) {
 
 // TestSessionMultipleSends tests sending multiple prompts
 func TestSessionMultipleSends(t *testing.T) {
-	mockAgent := agent.Agent{
-		Name:          "claude",
-		Path:          "/usr/bin/claude",
-		Authenticated: true,
-		Version:       "1.0.0",
-		Pattern:       agent.KnownAgents()["claude"],
-	}
-
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(mockAgent)
+	sess, err := mgr.CreateSession(newTestAgent())
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
