@@ -3,11 +3,12 @@ package agent
 
 // Agent represents a detected AI coding agent CLI tool.
 type Agent struct {
-	Name          string     // e.g., "claude", "codex", "cursor-agent"
-	Path          string     // Full path to the binary
-	Authenticated bool       // Whether the agent is authenticated
-	Version       string     // Agent version if available
-	Pattern       CLIPattern // CLI invocation pattern for this agent
+	Name          string       // e.g., "claude", "codex", "cursor-agent"
+	Path          string       // Full path to the binary
+	Authenticated bool         // Whether the agent is authenticated
+	Version       string       // Agent version if available
+	Pattern       CLIPattern   // CLI invocation pattern for this agent
+	Parser        OutputParser // Parser for transforming agent output
 }
 
 // Detector finds and validates available AI agents.
