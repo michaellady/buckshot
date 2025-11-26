@@ -1,23 +1,9 @@
 package context
 
 import (
-	"os/exec"
 	"strings"
 	"testing"
 )
-
-// skipIfNoBeads skips the test if bd is not available or has no beads
-func skipIfNoBeads(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("bd"); err != nil {
-		t.Skip("Skipping test: bd command not available")
-	}
-	// Check if there are any beads
-	out, err := exec.Command("bd", "list").Output()
-	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
-		t.Skip("Skipping test: no beads in database")
-	}
-}
 
 func TestBuild_CreatesContextWithPromptAndAgentsPath(t *testing.T) {
 	builder := NewBuilder()
@@ -50,8 +36,6 @@ func TestBuild_CreatesContextWithPromptAndAgentsPath(t *testing.T) {
 }
 
 func TestBuild_IncludesBeadsListOutput(t *testing.T) {
-	skipIfNoBeads(t)
-
 	builder := NewBuilder()
 
 	ctx, err := builder.Build("test prompt", "/agents.md", 1, true)
@@ -71,8 +55,6 @@ func TestBuild_IncludesBeadsListOutput(t *testing.T) {
 }
 
 func TestBuild_IncludesBeadsShowDetailsForEachBead(t *testing.T) {
-	skipIfNoBeads(t)
-
 	builder := NewBuilder()
 
 	ctx, err := builder.Build("test prompt", "/agents.md", 1, true)
@@ -305,8 +287,6 @@ func TestFormat_ClearSectionSeparation(t *testing.T) {
 }
 
 func TestBuild_IncludesBeadDependencies(t *testing.T) {
-	skipIfNoBeads(t)
-
 	builder := NewBuilder()
 
 	ctx, err := builder.Build("test", "/agents.md", 1, true)
