@@ -21,3 +21,36 @@ type Builder interface {
 	// RefreshBeadsState updates the beads state in the context.
 	RefreshBeadsState(ctx *PlanningContext) error
 }
+
+// defaultBuilder is a stub implementation of Builder.
+type defaultBuilder struct{}
+
+// NewBuilder creates a new Builder instance.
+func NewBuilder() Builder {
+	return &defaultBuilder{}
+}
+
+// Build creates a planning context (stub implementation).
+func (b *defaultBuilder) Build(prompt string, agentsPath string, round int, isFirstTurn bool) (PlanningContext, error) {
+	// TODO: Implement actual context building
+	return PlanningContext{
+		Prompt:      prompt,
+		AgentsPath:  agentsPath,
+		BeadsState:  "", // Stub: should gather bd list + bd show output
+		Round:       round,
+		IsFirstTurn: isFirstTurn,
+	}, nil
+}
+
+// Format converts a PlanningContext to a prompt string (stub implementation).
+func (b *defaultBuilder) Format(ctx PlanningContext) string {
+	// TODO: Implement actual formatting with proper sections and instructions
+	return "" // Stub: returns empty string
+}
+
+// RefreshBeadsState updates the beads state (stub implementation).
+func (b *defaultBuilder) RefreshBeadsState(ctx *PlanningContext) error {
+	// TODO: Implement actual refresh logic
+	// Stub: does nothing
+	return nil
+}
