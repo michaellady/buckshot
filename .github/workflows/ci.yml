@@ -33,7 +33,7 @@ jobs:
         run: |
           BEAD1=$(bd create --title "Test task 1" --priority P1 --type task --description "A test task for CI" --json | jq -r '.id')
           BEAD2=$(bd create --title "Test bug fix" --priority P2 --type bug --description "A test bug for CI" --json | jq -r '.id')
-          bd create --title "Test feature" --priority P3 --type feature --description "A test feature for CI" --blocks "$BEAD1"
+          bd create --title "Test feature" --priority P3 --type feature --description "A test feature for CI" --deps "blocks:$BEAD1"
 
       - name: Build
         run: go build -v ./...
