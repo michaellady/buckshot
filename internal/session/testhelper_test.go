@@ -59,6 +59,34 @@ func newUnauthenticatedTestAgent() agent.Agent {
 	return a
 }
 
+// newTestAgentsFile creates a temporary AGENTS.md file for testing
+// and returns its path. The file is automatically cleaned up when the test completes.
+func newTestAgentsFile(t *testing.T) string {
+	t.Helper()
+
+	// Create temp directory
+	tmpDir := t.TempDir()
+	agentsPath := filepath.Join(tmpDir, "AGENTS.md")
+
+	// Create a valid AGENTS.md file
+	content := `# Test AGENTS.md
+
+This is a test AGENTS.md file for buckshot session tests.
+
+## Instructions
+
+- Follow coding best practices
+- Write clean, maintainable code
+- Add tests for new functionality
+`
+
+	if err := os.WriteFile(agentsPath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to create test AGENTS.md: %v", err)
+	}
+
+	return agentsPath
+}
+
 // mockClaudePath returns the path to use for mock claude in tests.
 func mockClaudePath() string {
 	if path := os.Getenv("TEST_MOCK_CLAUDE"); path != "" {

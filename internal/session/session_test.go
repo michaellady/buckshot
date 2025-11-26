@@ -28,7 +28,7 @@ func TestSessionStart(t *testing.T) {
 
 	// Start should initialize the session with AGENTS.md path
 	ctx := context.Background()
-	agentsPath := "/Users/mikelady/dev/AGENTS/AGENTS.md"
+	agentsPath := newTestAgentsFile(t)
 	err = sess.Start(ctx, agentsPath)
 	if err != nil {
 		t.Errorf("Start() error = %v", err)
@@ -68,7 +68,7 @@ func TestSessionSend(t *testing.T) {
 	defer sess.Close()
 
 	ctx := context.Background()
-	agentsPath := "/Users/mikelady/dev/AGENTS/AGENTS.md"
+	agentsPath := newTestAgentsFile(t)
 	if err := sess.Start(ctx, agentsPath); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -127,7 +127,7 @@ func TestSessionContextUsage(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	agentsPath := "/Users/mikelady/dev/AGENTS/AGENTS.md"
+	agentsPath := newTestAgentsFile(t)
 	if err := sess.Start(ctx, agentsPath); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -156,7 +156,7 @@ func TestSessionIsAlive(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	agentsPath := "/Users/mikelady/dev/AGENTS/AGENTS.md"
+	agentsPath := newTestAgentsFile(t)
 	if err := sess.Start(ctx, agentsPath); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -185,7 +185,7 @@ func TestSessionClose(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	agentsPath := "/Users/mikelady/dev/AGENTS/AGENTS.md"
+	agentsPath := newTestAgentsFile(t)
 	if err := sess.Start(ctx, agentsPath); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -280,7 +280,7 @@ func TestSessionMultipleSends(t *testing.T) {
 	defer sess.Close()
 
 	ctx := context.Background()
-	agentsPath := "/Users/mikelady/dev/AGENTS/AGENTS.md"
+	agentsPath := newTestAgentsFile(t)
 	if err := sess.Start(ctx, agentsPath); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
