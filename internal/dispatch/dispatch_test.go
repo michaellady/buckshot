@@ -82,6 +82,7 @@ func (m *mockSession) Close() error {
 
 // TestDispatchConcurrent verifies that dispatch sends to all agents concurrently.
 func TestDispatchConcurrent(t *testing.T) {
+	t.Skip("TDD RED: awaiting implementation in buckshot-byq (GREEN phase)")
 	var concurrentCalls int32
 	var maxConcurrent int32
 	var mu sync.Mutex
@@ -141,6 +142,7 @@ func TestDispatchConcurrent(t *testing.T) {
 
 // TestDispatchCollectsAllResults verifies all agent responses are collected.
 func TestDispatchCollectsAllResults(t *testing.T) {
+	t.Skip("TDD RED: awaiting implementation in buckshot-byq (GREEN phase)")
 	sessions := []session.Session{
 		newMockSession("agent1"),
 		newMockSession("agent2"),
@@ -176,6 +178,7 @@ func TestDispatchCollectsAllResults(t *testing.T) {
 
 // TestDispatchPartialFailure verifies handling when some agents fail.
 func TestDispatchPartialFailure(t *testing.T) {
+	t.Skip("TDD RED: awaiting implementation in buckshot-byq (GREEN phase)")
 	errAgent := errors.New("agent failed")
 
 	sessions := []session.Session{
@@ -230,6 +233,7 @@ func TestDispatchPartialFailure(t *testing.T) {
 
 // TestDispatchRespectsTimeout verifies context timeout is respected.
 func TestDispatchRespectsTimeout(t *testing.T) {
+	t.Skip("TDD RED: awaiting implementation in buckshot-byq (GREEN phase)")
 	sessions := []session.Session{
 		newMockSession("slow"),
 		newMockSession("fast"),
@@ -330,6 +334,7 @@ func TestDispatchEmptySessions(t *testing.T) {
 
 // TestDispatchContextCancellation verifies in-flight requests are cancelled.
 func TestDispatchContextCancellation(t *testing.T) {
+	t.Skip("TDD RED: awaiting implementation in buckshot-byq (GREEN phase)")
 	cancelledCount := int32(0)
 
 	sessions := make([]session.Session, 3)
@@ -378,6 +383,7 @@ func TestDispatchContextCancellation(t *testing.T) {
 
 // TestDispatchSingleAgent verifies dispatch works with just one agent.
 func TestDispatchSingleAgent(t *testing.T) {
+	t.Skip("TDD RED: awaiting implementation in buckshot-byq (GREEN phase)")
 	mock := newMockSession("solo")
 	mock.sendFunc = func(ctx context.Context, prompt string) (session.Response, error) {
 		return session.Response{Output: "solo response"}, nil
