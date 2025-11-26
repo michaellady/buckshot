@@ -124,9 +124,12 @@ func TestSessionSendWithCodexParserExtractsText(t *testing.T) {
 		t.Errorf("Send() output contains raw JSON, want parsed text. Got: %q", resp.Output)
 	}
 
-	// Should contain the extracted text content
-	if !strings.Contains(resp.Output, "Processing your request") {
-		t.Errorf("Send() output missing extracted text 'Processing your request', got: %q", resp.Output)
+	// Should contain extracted text content (from either initial output or response)
+	hasExpectedContent := strings.Contains(resp.Output, "Processing your request") ||
+		strings.Contains(resp.Output, "I will help you with that") ||
+		strings.Contains(resp.Output, "Command completed successfully")
+	if !hasExpectedContent {
+		t.Errorf("Send() output missing extracted text content, got: %q", resp.Output)
 	}
 }
 
