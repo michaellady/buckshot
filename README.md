@@ -32,7 +32,7 @@ make install
 - At least one AI coding agent CLI:
   - `claude` - [Claude Code](https://claude.ai/code)
   - `codex` - [OpenAI Codex CLI](https://github.com/openai/codex)
-  - `cursor` - [Cursor CLI](https://cursor.sh)
+  - `cursor-agent` - [Cursor Agent](https://cursor.sh)
 
 ## Usage
 
