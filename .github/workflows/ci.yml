@@ -17,6 +17,12 @@ jobs:
         with:
           go-version: 'stable'
 
+      - name: Install bd (beads CLI)
+        run: go install github.com/steveyegge/beads/cmd/bd@latest
+
+      - name: Initialize beads database
+        run: bd init
+
       - name: Build
         run: go build -v ./...
 
