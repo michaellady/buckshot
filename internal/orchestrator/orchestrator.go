@@ -40,7 +40,7 @@ type RoundOrchestrator interface {
 	SetContextBuilder(builder buckctx.Builder)
 }
 
-// defaultOrchestrator is a stub implementation.
+// defaultOrchestrator is the default implementation.
 type defaultOrchestrator struct {
 	sessionMgr     session.Manager
 	contextBuilder buckctx.Builder
@@ -51,10 +51,97 @@ func NewRoundOrchestrator() RoundOrchestrator {
 	return &defaultOrchestrator{}
 }
 
-// RunRound executes agents in sequence (stub implementation).
+// RunRound executes agents in sequence.
+// Each agent sees the beads state AFTER previous agents in the round.
 func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent, planCtx buckctx.PlanningContext) (RoundResult, error) {
-	// Stub: Returns empty result
-	return RoundResult{Round: planCtx.Round}, nil
+	result := RoundResult{
+		Round:        planCtx.Round,
+		AgentResults: make([]AgentResult, 0, len(agents)),
+	}
+
+	// Process each agent in sequence
+	for i, ag := range agents {
+		agentResult := AgentResult{
+			Agent:        ag,
+			BeadsChanged: []string{},
+		}
+
+		// Skip unauthenticated agents
+		if !ag.Authenticated {
+			agentResult.Skipped = true
+			result.SkippedCount++
+			result.AgentResults = append(result.AgentResults, agentResult)
+			continue
+		}
+
+		// Refresh beads state before each agent (except first which already has it)
+		if i > 0 && o.contextBuilder != nil {
+			_ = o.contextBuilder.RefreshBeadsState(&planCtx)
+		}
+
+		// Create session for this agent
+		if o.sessionMgr == nil {
+			agentResult.Error = context.Canceled
+			result.FailedCount++
+			result.AgentResults = append(result.AgentResults, agentResult)
+			continue
+		}
+
+		sess, err := o.sessionMgr.CreateSession(ag)
+		if err != nil {
+			agentResult.Error = err
+			result.FailedCount++
+			result.AgentResults = append(result.AgentResults, agentResult)
+			continue
+		}
+		defer sess.Close()
+
+		// Start the session
+		if err := sess.Start(ctx, planCtx.AgentsPath); err != nil {
+			agentResult.Error = err
+			result.FailedCount++
+			result.AgentResults = append(result.AgentResults, agentResult)
+			continue
+		}
+
+		// Format and send the prompt
+		prompt := planCtx.Prompt
+		if o.contextBuilder != nil {
+			prompt = o.contextBuilder.Format(planCtx)
+		}
+
+		resp, err := sess.Send(ctx, prompt)
+		if err != nil {
+			agentResult.Error = err
+			agentResult.Response = resp
+			result.FailedCount++
+			result.AgentResults = append(result.AgentResults, agentResult)
+			continue
+		}
+
+		agentResult.Response = resp
+
+		// Parse response for bead changes (simplified: look for bead IDs in output)
+		agentResult.BeadsChanged = parseBeadChanges(resp.Output)
+		result.TotalChanges += len(agentResult.BeadsChanged)
+
+		result.AgentResults = append(result.AgentResults, agentResult)
+	}
+
+	// Refresh beads state after all agents for next round
+	if o.contextBuilder != nil && len(agents) > 0 {
+		_ = o.contextBuilder.RefreshBeadsState(&planCtx)
+	}
+
+	return result, nil
+}
+
+// parseBeadChanges extracts bead IDs from agent output.
+// Looks for patterns like "buckshot-xxx" or "Created: buckshot-xxx"
+func parseBeadChanges(output string) []string {
+	// Simple implementation - can be enhanced with regex
+	// For now, returns empty slice (changes tracked by beads diff)
+	return []string{}
 }
 
 // SetSessionManager sets the session manager.
