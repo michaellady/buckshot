@@ -6,6 +6,7 @@ import (
 	"github.com/michaellady/buckshot/internal/agent"
 	"github.com/michaellady/buckshot/internal/convergence"
 	buckctx "github.com/michaellady/buckshot/internal/context"
+	"github.com/michaellady/buckshot/internal/notes"
 	"github.com/michaellady/buckshot/internal/orchestrator"
 	"github.com/michaellady/buckshot/internal/session"
 	"github.com/spf13/cobra"
@@ -16,6 +17,7 @@ var (
 	agentsPath     string
 	selectedAgents []string
 	untilConverged bool
+	saveToBead     string
 )
 
 var planCmd = &cobra.Command{
@@ -82,6 +84,13 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	// Set up convergence detector
 	convDetector := convergence.NewDetector()
 
+	// Set up notes saver if --save flag is set
+	var noteSaver notes.Saver
+	if saveToBead != "" {
+		noteSaver = notes.NewSaver()
+		fmt.Fprintf(out, "Saving perspectives to: %s\n", saveToBead)
+	}
+
 	// Build initial planning context
 	builder := buckctx.NewBuilder()
 	planCtx, err := builder.Build(prompt, agentsPath, 1, true)
@@ -109,6 +118,15 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		// Report results
 		fmt.Fprintf(out, "Changes: %d, Failed: %d, Skipped: %d\n",
 			result.TotalChanges, result.FailedCount, result.SkippedCount)
+
+		// Save perspectives to bead if --save flag is set
+		if noteSaver != nil {
+			if err := noteSaver.SaveRoundResults(cmd.Context(), saveToBead, result); err != nil {
+				fmt.Fprintf(out, "Warning: failed to save perspectives: %v\n", err)
+			} else {
+				fmt.Fprintf(out, "Saved round %d perspectives to %s\n", round, saveToBead)
+			}
+		}
 
 		// Check convergence
 		if untilConverged && convDetector.CheckConvergence(result) {
@@ -147,4 +165,5 @@ func init() {
 	planCmd.Flags().StringVarP(&agentsPath, "agents-path", "a", "", "Path to AGENTS.md file")
 	planCmd.Flags().StringSliceVar(&selectedAgents, "agents", nil, "Specific agents to use (default: all available)")
 	planCmd.Flags().BoolVar(&untilConverged, "until-converged", false, "Run until all agents report no changes")
+	planCmd.Flags().StringVar(&saveToBead, "save", "", "Save agent perspectives to specified bead ID")
 }
