@@ -20,7 +20,7 @@ func TestManagerInterface(t *testing.T) {
 // TestSessionStart tests that Start initializes session with AGENTS.md path
 func TestSessionStart(t *testing.T) {
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(newTestAgent())
+	sess, err := mgr.CreateSession(newTestAgentWithMock(t))
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -114,7 +114,7 @@ func TestSessionSendWithoutStart(t *testing.T) {
 // TestSessionContextUsage tests that ContextUsage returns 0.0-1.0
 func TestSessionContextUsage(t *testing.T) {
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(newTestAgent())
+	sess, err := mgr.CreateSession(newTestAgentWithMock(t))
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -145,7 +145,7 @@ func TestSessionContextUsage(t *testing.T) {
 // TestSessionIsAlive tests session lifecycle checks
 func TestSessionIsAlive(t *testing.T) {
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(newTestAgent())
+	sess, err := mgr.CreateSession(newTestAgentWithMock(t))
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
@@ -179,7 +179,7 @@ func TestSessionIsAlive(t *testing.T) {
 // TestSessionClose tests clean termination
 func TestSessionClose(t *testing.T) {
 	mgr := NewManager()
-	sess, err := mgr.CreateSession(newTestAgent())
+	sess, err := mgr.CreateSession(newTestAgentWithMock(t))
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}

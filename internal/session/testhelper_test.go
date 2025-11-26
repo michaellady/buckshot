@@ -52,6 +52,20 @@ func newTestAgent() agent.Agent {
 	}
 }
 
+// newTestAgentWithMock creates an agent.Agent that uses a mock claude binary.
+// This is useful for tests that need to actually execute the agent.
+func newTestAgentWithMock(t *testing.T) agent.Agent {
+	t.Helper()
+	mockPath := setupMockClaude(t)
+	return agent.Agent{
+		Name:          "claude",
+		Path:          mockPath,
+		Authenticated: true,
+		Version:       "1.0.0",
+		Pattern:       agent.KnownAgents()["claude"],
+	}
+}
+
 // newUnauthenticatedTestAgent creates an unauthenticated agent for testing.
 func newUnauthenticatedTestAgent() agent.Agent {
 	a := newTestAgent()
