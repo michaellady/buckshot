@@ -1,47 +1,128 @@
 package agent
 
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
 // DefaultDetector is the default implementation of Detector.
-// TODO: Implement in buckshot-vk6
 type DefaultDetector struct {
 	searchPath string
 }
 
 // NewDetector creates a new detector using the system PATH.
 func NewDetector() *DefaultDetector {
-	// TODO: Implement in buckshot-vk6
-	return &DefaultDetector{}
+	return &DefaultDetector{
+		searchPath: os.Getenv("PATH"),
+	}
 }
 
 // NewDetectorWithPath creates a detector with a custom search path.
 func NewDetectorWithPath(path string) *DefaultDetector {
-	// TODO: Implement in buckshot-vk6
 	return &DefaultDetector{searchPath: path}
 }
 
 // DetectAll returns all available agents on the system.
 func (d *DefaultDetector) DetectAll() ([]Agent, error) {
-	// TODO: Implement in buckshot-vk6
-	// This stub returns empty slice - tests will fail
-	return []Agent{}, nil
+	agents := []Agent{}
+	knownAgents := KnownAgents()
+
+	for name, pattern := range knownAgents {
+		if d.IsInstalled(name) {
+			agent := Agent{
+				Name:    name,
+				Path:    d.GetAgentPath(name),
+				Pattern: pattern,
+			}
+
+			// Get version
+			agent.Version = d.getVersion(agent)
+
+			// Check authentication
+			agent.Authenticated = d.IsAuthenticated(agent)
+
+			agents = append(agents, agent)
+		}
+	}
+
+	return agents, nil
 }
 
 // IsInstalled checks if a specific agent is installed.
 func (d *DefaultDetector) IsInstalled(name string) bool {
-	// TODO: Implement in buckshot-vk6
-	// This stub returns false - tests will fail
-	return false
+	return d.GetAgentPath(name) != ""
 }
 
 // IsAuthenticated checks if an agent is authenticated.
 func (d *DefaultDetector) IsAuthenticated(agent Agent) bool {
-	// TODO: Implement in buckshot-vk6
-	// This stub returns false - tests will fail
-	return false
+	if agent.Path == "" {
+		return false
+	}
+
+	// For most agents, if they're installed and version works, assume authenticated
+	// Real auth check would require running a command that hits the API
+	pattern, ok := KnownAgents()[agent.Name]
+	if !ok {
+		return false
+	}
+
+	// Try running the auth check command
+	var cmd *exec.Cmd
+	if len(pattern.AuthCheckCmd) > 0 {
+		cmd = exec.Command(agent.Path, pattern.AuthCheckCmd...)
+	} else {
+		// Fall back to version check
+		cmd = exec.Command(agent.Path, pattern.VersionArgs...)
+	}
+
+	err := cmd.Run()
+	return err == nil
 }
 
 // GetAgentPath returns the full path for an agent binary.
 func (d *DefaultDetector) GetAgentPath(name string) string {
-	// TODO: Implement in buckshot-vk6
-	// This stub returns empty string - tests will fail
+	if d.searchPath == "" {
+		return ""
+	}
+
+	// Check each directory in the search path
+	for _, dir := range filepath.SplitList(d.searchPath) {
+		path := filepath.Join(dir, name)
+		if info, err := os.Stat(path); err == nil {
+			// Check if it's executable
+			if info.Mode()&0111 != 0 {
+				return path
+			}
+		}
+	}
+
 	return ""
+}
+
+// getVersion retrieves the version string for an agent.
+func (d *DefaultDetector) getVersion(agent Agent) string {
+	if agent.Path == "" {
+		return ""
+	}
+
+	pattern, ok := KnownAgents()[agent.Name]
+	if !ok || len(pattern.VersionArgs) == 0 {
+		return ""
+	}
+
+	cmd := exec.Command(agent.Path, pattern.VersionArgs...)
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+
+	// Return first line of output, trimmed
+	version := strings.TrimSpace(string(output))
+	if idx := strings.Index(version, "\n"); idx != -1 {
+		version = version[:idx]
+	}
+
+	return version
 }
