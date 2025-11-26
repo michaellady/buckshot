@@ -4,6 +4,7 @@ package dispatch
 import (
 	"context"
 	"sort"
+	"sync"
 
 	"github.com/michaellady/buckshot/internal/agent"
 	"github.com/michaellady/buckshot/internal/session"
@@ -35,13 +36,45 @@ func New() Dispatcher {
 // Dispatch sends a prompt to multiple agents concurrently.
 // Results are always returned sorted by agent name for deterministic output.
 func (d *dispatcher) Dispatch(ctx context.Context, sessions []session.Session, prompt string) []Result {
-	// TODO: Implement parallel dispatch
-	// This is intentionally unimplemented to make tests fail (TDD RED phase)
-	results := make([]Result, len(sessions))
-	for i, sess := range sessions {
-		results[i] = Result{
-			Agent: sess.Agent(),
-		}
+	if len(sessions) == 0 {
+		return []Result{}
+	}
+
+	// Channel to collect results from goroutines
+	resultCh := make(chan Result, len(sessions))
+
+	// WaitGroup to track completion of all goroutines
+	var wg sync.WaitGroup
+
+	// Fan-out: spawn a goroutine for each session
+	for _, sess := range sessions {
+		wg.Add(1)
+		go func(s session.Session) {
+			defer wg.Done()
+
+			result := Result{
+				Agent: s.Agent(),
+			}
+
+			// Send prompt and capture response/error
+			resp, err := s.Send(ctx, prompt)
+			result.Response = resp
+			result.Error = err
+
+			resultCh <- result
+		}(sess)
+	}
+
+	// Close channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	// Fan-in: collect all results
+	results := make([]Result, 0, len(sessions))
+	for result := range resultCh {
+		results = append(results, result)
 	}
 
 	// Sort by agent name for deterministic output
