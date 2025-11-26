@@ -25,9 +25,9 @@ jobs:
 
       - name: Create test beads
         run: |
-          bd create --title "Test task 1" --priority P1 --type task
-          bd create --title "Test bug fix" --priority P2 --type bug
-          bd create --title "Test feature" --priority P3 --type feature
+          bd create --title "Test task 1" --priority P1 --type task --description "A test task for CI"
+          bd create --title "Test bug fix" --priority P2 --type bug --description "A test bug for CI"
+          bd create --title "Test feature" --priority P3 --type feature --description "A test feature for CI"
 
       - name: Build
         run: go build -v ./...
