@@ -197,6 +197,11 @@ func (s *DefaultSession) Send(ctx context.Context, prompt string) (Response, err
 	usage := s.contextUsage
 	s.mu.Unlock()
 
+	// Apply parser if available
+	if s.agent.Parser != nil {
+		output = s.agent.Parser.Parse(output)
+	}
+
 	return Response{
 		Output:       output,
 		ContextUsage: usage,
