@@ -345,3 +345,42 @@ func TestPlanCommand_ShorthandFlags(t *testing.T) {
 		t.Errorf("agentsPath = %q, want %q", agentsPath, "/path/to/agents.md")
 	}
 }
+
+// TestPlanCommand_SaveFlag tests the --save flag
+func TestPlanCommand_SaveFlag(t *testing.T) {
+	flag := planCmd.Flags().Lookup("save")
+	if flag == nil {
+		t.Fatal("--save flag not found")
+	}
+
+	if flag.DefValue != "" {
+		t.Errorf("--save default = %q, want empty string", flag.DefValue)
+	}
+}
+
+// TestPlanCommand_SaveFlagCustomValue tests setting a bead ID to save to
+func TestPlanCommand_SaveFlagCustomValue(t *testing.T) {
+	// Reset
+	saveToBead = ""
+
+	rootCmd.SetArgs([]string{"plan", "--save", "buckshot-123", "Test prompt"})
+
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Errorf("plan command with --save should not error, got: %v", err)
+	}
+
+	if saveToBead != "buckshot-123" {
+		t.Errorf("saveToBead = %q, want %q", saveToBead, "buckshot-123")
+	}
+
+	// Output should mention saving
+	output := buf.String()
+	if !strings.Contains(output, "buckshot-123") {
+		t.Errorf("Output should mention bead ID when --save is set, got: %s", output)
+	}
+}
