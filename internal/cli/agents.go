@@ -14,7 +14,7 @@ var agentsCmd = &cobra.Command{
 Buckshot looks for the following CLI tools:
   - claude (Claude Code)
   - codex (OpenAI Codex CLI)
-  - cursor (Cursor CLI)
+  - cursor-agent (Cursor Agent)
 
 Each agent is checked for installation and authentication status.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
