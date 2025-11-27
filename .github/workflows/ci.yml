@@ -42,9 +42,12 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Test with Coverage
+      - name: Build Mock Agent
+        run: go build -o testdata/mockagent/mock-agent ./testdata/mockagent
+
+      - name: Test with Coverage (including integration tests)
         run: |
-          go test -coverprofile=coverage.out -covermode=atomic ./...
+          go test -tags=integration -coverprofile=coverage.out -covermode=atomic ./...
           go tool cover -func=coverage.out | tee coverage.txt
 
       - name: Extract Coverage Percentage
