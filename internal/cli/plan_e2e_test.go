@@ -68,6 +68,7 @@ func TestPlanCommand_E2E_RealAgents(t *testing.T) {
 		"plan",
 		"--rounds", "1",
 		"--agents-path", agentsPath,
+		"--verbose",
 		"Say hello and confirm you received this prompt",
 	})
 
@@ -156,6 +157,7 @@ func TestPlanCommand_E2E_SingleAgent(t *testing.T) {
 		"plan",
 		"--rounds", "1",
 		"--agents-path", agentsPath,
+		"--verbose",
 		"Respond with exactly: BUCKSHOT_E2E_OK",
 	})
 
@@ -221,6 +223,7 @@ func TestPlanCommand_E2E_MultipleRounds(t *testing.T) {
 		"plan",
 		"--rounds", "2",
 		"--agents-path", agentsPath,
+		"--verbose",
 		"Simple task: count from 1 to 3",
 	})
 
@@ -297,6 +300,7 @@ func TestPlanCommand_E2E_AgentSelection(t *testing.T) {
 		"--rounds", "1",
 		"--agents", selectedName,
 		"--agents-path", agentsPath,
+		"--verbose",
 		"Acknowledge receipt",
 	})
 

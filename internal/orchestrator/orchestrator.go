@@ -3,11 +3,25 @@ package orchestrator
 
 import (
 	"context"
+	"os/exec"
 
 	"github.com/michaellady/buckshot/internal/agent"
 	buckctx "github.com/michaellady/buckshot/internal/context"
 	"github.com/michaellady/buckshot/internal/session"
 )
+
+// newOSCmd wraps exec.Command for shell execution
+func newOSCmd(name string, args ...string) *exec.Cmd {
+	return exec.Command(name, args...)
+}
+
+// ProgressReporter receives progress updates during round execution.
+type ProgressReporter interface {
+	// OnAgentStart is called when an agent begins its turn.
+	OnAgentStart(round, agentIndex, totalAgents int, agent agent.Agent)
+	// OnAgentComplete is called when an agent finishes its turn.
+	OnAgentComplete(round, agentIndex, totalAgents int, result AgentResult, beadsDiff string)
+}
 
 // AgentResult represents the outcome of a single agent's turn.
 type AgentResult struct {
@@ -38,12 +52,16 @@ type RoundOrchestrator interface {
 
 	// SetContextBuilder sets the context builder for refreshing beads state.
 	SetContextBuilder(builder buckctx.Builder)
+
+	// SetProgressReporter sets the progress reporter for verbose output.
+	SetProgressReporter(reporter ProgressReporter)
 }
 
 // defaultOrchestrator is the default implementation.
 type defaultOrchestrator struct {
-	sessionMgr     session.Manager
-	contextBuilder buckctx.Builder
+	sessionMgr       session.Manager
+	contextBuilder   buckctx.Builder
+	progressReporter ProgressReporter
 }
 
 // NewRoundOrchestrator creates a new round orchestrator.
@@ -71,8 +89,19 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			agentResult.Skipped = true
 			result.SkippedCount++
 			result.AgentResults = append(result.AgentResults, agentResult)
+			if o.progressReporter != nil {
+				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, "")
+			}
 			continue
 		}
+
+		// Report agent start
+		if o.progressReporter != nil {
+			o.progressReporter.OnAgentStart(planCtx.Round, i+1, len(agents), ag)
+		}
+
+		// Capture beads state before this agent
+		beadsBefore := captureBeadsState()
 
 		// Refresh beads state before each agent (except first which already has it)
 		if i > 0 && o.contextBuilder != nil {
@@ -84,6 +113,9 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			agentResult.Error = context.Canceled
 			result.FailedCount++
 			result.AgentResults = append(result.AgentResults, agentResult)
+			if o.progressReporter != nil {
+				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, "")
+			}
 			continue
 		}
 
@@ -92,6 +124,9 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			agentResult.Error = err
 			result.FailedCount++
 			result.AgentResults = append(result.AgentResults, agentResult)
+			if o.progressReporter != nil {
+				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, "")
+			}
 			continue
 		}
 		defer func() { _ = sess.Close() }()
@@ -101,6 +136,9 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			agentResult.Error = err
 			result.FailedCount++
 			result.AgentResults = append(result.AgentResults, agentResult)
+			if o.progressReporter != nil {
+				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, "")
+			}
 			continue
 		}
 
@@ -116,6 +154,11 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			agentResult.Response = resp
 			result.FailedCount++
 			result.AgentResults = append(result.AgentResults, agentResult)
+			if o.progressReporter != nil {
+				beadsAfter := captureBeadsState()
+				diff := diffBeadsState(beadsBefore, beadsAfter)
+				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, diff)
+			}
 			continue
 		}
 
@@ -126,6 +169,13 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 		result.TotalChanges += len(agentResult.BeadsChanged)
 
 		result.AgentResults = append(result.AgentResults, agentResult)
+
+		// Report agent complete with beads diff
+		if o.progressReporter != nil {
+			beadsAfter := captureBeadsState()
+			diff := diffBeadsState(beadsBefore, beadsAfter)
+			o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, diff)
+		}
 	}
 
 	// Refresh beads state after all agents for next round
@@ -152,4 +202,119 @@ func (o *defaultOrchestrator) SetSessionManager(mgr session.Manager) {
 // SetContextBuilder sets the context builder.
 func (o *defaultOrchestrator) SetContextBuilder(builder buckctx.Builder) {
 	o.contextBuilder = builder
+}
+
+// SetProgressReporter sets the progress reporter.
+func (o *defaultOrchestrator) SetProgressReporter(reporter ProgressReporter) {
+	o.progressReporter = reporter
+}
+
+// captureBeadsState captures the current beads state by running `bd list --json`.
+func captureBeadsState() string {
+	out, err := runBdCommand("list", "--json")
+	if err != nil {
+		return ""
+	}
+	return out
+}
+
+// diffBeadsState computes a human-readable diff between two beads states.
+func diffBeadsState(before, after string) string {
+	if before == after {
+		return "(no changes)"
+	}
+	if before == "" && after == "" {
+		return "(no beads)"
+	}
+	if before == "" {
+		return "(beads initialized)\n" + after
+	}
+	if after == "" {
+		return "(beads cleared)"
+	}
+	// For now, just show a simple diff indicator
+	// A more sophisticated diff could parse JSON and compare fields
+	return computeSimpleDiff(before, after)
+}
+
+// runBdCommand executes a bd command and returns its output.
+func runBdCommand(args ...string) (string, error) {
+	// Import os/exec inline to avoid adding to package imports
+	// This is a simple helper that shells out to bd
+	cmd := execCommand("bd", args...)
+	out, err := cmd.Output()
+	return string(out), err
+}
+
+// execCommand is a variable for testing - allows mocking exec.Command
+var execCommand = defaultExecCommand
+
+func defaultExecCommand(name string, args ...string) cmdRunner {
+	return &realCmd{name: name, args: args}
+}
+
+type cmdRunner interface {
+	Output() ([]byte, error)
+}
+
+type realCmd struct {
+	name string
+	args []string
+}
+
+func (c *realCmd) Output() ([]byte, error) {
+	cmd := newOSCmd(c.name, c.args...)
+	return cmd.Output()
+}
+
+// computeSimpleDiff computes a simple line-by-line diff
+func computeSimpleDiff(before, after string) string {
+	// Simple approach: show what changed
+	beforeLines := splitLines(before)
+	afterLines := splitLines(after)
+
+	var diff string
+	beforeSet := make(map[string]bool)
+	for _, line := range beforeLines {
+		beforeSet[line] = true
+	}
+
+	afterSet := make(map[string]bool)
+	for _, line := range afterLines {
+		afterSet[line] = true
+	}
+
+	// Find removed lines
+	for _, line := range beforeLines {
+		if !afterSet[line] && line != "" {
+			diff += "- " + line + "\n"
+		}
+	}
+
+	// Find added lines
+	for _, line := range afterLines {
+		if !beforeSet[line] && line != "" {
+			diff += "+ " + line + "\n"
+		}
+	}
+
+	if diff == "" {
+		return "(whitespace changes only)"
+	}
+	return diff
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
 }
