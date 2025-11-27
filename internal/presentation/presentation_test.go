@@ -227,11 +227,8 @@ func TestFormatJSONIncludesAllFields(t *testing.T) {
 func TestFormatEmptyResults(t *testing.T) {
 	f := New()
 
-	// Terminal format
-	termOutput := f.Format(nil, FormatTerminal)
-	if termOutput == "" {
-		// Empty is acceptable, but shouldn't panic
-	}
+	// Terminal format - empty output is acceptable, we just verify it doesn't panic
+	_ = f.Format(nil, FormatTerminal)
 
 	// JSON format should still be valid
 	jsonOutput := f.Format([]AgentResult{}, FormatJSON)

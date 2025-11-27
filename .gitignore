@@ -3,6 +3,7 @@ buckshot
 buckshot.exe
 
 # Test coverage
+coverage/
 coverage.out
 coverage.html
 
@@ -22,6 +23,7 @@ vendor/
 
 # Build
 dist/
+testdata/mockagent/mock-agent
 
 # Local config (keep templates, ignore local overrides)
 *.local.yaml

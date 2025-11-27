@@ -258,15 +258,15 @@ func (s *DefaultSession) Close() error {
 
 	// Close stdin to signal end of input
 	if s.stdin != nil {
-		s.stdin.Close()
+		_ = s.stdin.Close()
 	}
 
 	// Close stdout and stderr
 	if s.stdout != nil {
-		s.stdout.Close()
+		_ = s.stdout.Close()
 	}
 	if s.stderr != nil {
-		s.stderr.Close()
+		_ = s.stderr.Close()
 	}
 
 	// Kill the process if still running

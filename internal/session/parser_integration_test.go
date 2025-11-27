@@ -70,7 +70,7 @@ func TestSessionSendUsesAgentParser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)
@@ -106,7 +106,7 @@ func TestSessionSendWithCodexParserExtractsText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)
@@ -150,7 +150,7 @@ func TestSessionSendWithoutParserReturnsRawOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)
@@ -187,7 +187,7 @@ func TestSessionSendWithNoopParserReturnsUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)
@@ -230,7 +230,7 @@ func TestParsedOutputAppearsInResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)
