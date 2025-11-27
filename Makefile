@@ -1,4 +1,4 @@
-.PHONY: build test test-short test-integration lint coverage coverage-html coverage-pkg clean install
+.PHONY: build test test-short test-integration test-e2e lint coverage coverage-html coverage-pkg clean install
 
 # Build variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -29,6 +29,10 @@ test-short:
 # Run integration tests only
 test-integration: build-mockagent
 	go test -v -tags=integration ./...
+
+# Run e2e tests against real agents (requires authenticated agents)
+test-e2e:
+	go test -v -tags=e2e ./...
 
 # Run linter
 lint:
