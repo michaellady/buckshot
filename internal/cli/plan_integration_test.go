@@ -21,6 +21,9 @@ func TestPlanCommand_Integration_WithMockAgent(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
+
 	// Setup mock agent
 	mockSetup := testutil.SetupMockAgent(t, "mock-claude", testutil.DefaultMockConfig())
 
@@ -93,6 +96,9 @@ func TestPlanCommand_Integration_NoAuthenticatedAgents(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
+
 	// Setup mock agent that fails auth
 	config := testutil.DefaultMockConfig()
 	config.Mode = testutil.ModeAuthFail
@@ -132,6 +138,9 @@ func TestPlanCommand_Integration_MultipleAgents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
 
 	// Setup multiple mock agents
 	configs := map[string]testutil.MockAgentConfig{
@@ -190,6 +199,9 @@ func TestPlanCommand_Integration_AgentSelection(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
+
 	// Setup multiple agents
 	configs := map[string]testutil.MockAgentConfig{
 		"claude": testutil.DefaultMockConfig(),
@@ -214,9 +226,6 @@ func TestPlanCommand_Integration_AgentSelection(t *testing.T) {
 		return agents, nil
 	})
 	defer restore()
-
-	// Reset the selectedAgents flag before test
-	selectedAgents = nil
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -251,6 +260,9 @@ func TestPlanCommand_Integration_Convergence(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
+
 	// Setup mock agent that converges after first round
 	config := testutil.DefaultMockConfig()
 	config.Mode = testutil.ModeConverged
@@ -267,12 +279,6 @@ func TestPlanCommand_Integration_Convergence(t *testing.T) {
 		return []agent.Agent{mockSetup.Agent}, nil
 	})
 	defer restore()
-
-	// Reset ALL flags (important: previous tests may have set these)
-	selectedAgents = nil
-	untilConverged = false
-	rounds = 3
-	saveToBead = ""
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -305,6 +311,9 @@ func TestPlanCommand_Integration_ErrorHandling(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
 
 	// Setup mock agent that errors
 	config := testutil.DefaultMockConfig()
@@ -357,6 +366,9 @@ func TestPlanCommand_Integration_ContextUsageTracking(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Reset all flags to ensure clean state
+	resetPlanFlags()
+
 	// Setup mock agent with high context growth
 	config := testutil.DefaultMockConfig()
 	config.InitialContext = 0.10
@@ -374,12 +386,6 @@ func TestPlanCommand_Integration_ContextUsageTracking(t *testing.T) {
 		return []agent.Agent{mockSetup.Agent}, nil
 	})
 	defer restore()
-
-	// Reset ALL flags (important: previous tests may have set these)
-	selectedAgents = nil
-	untilConverged = false
-	rounds = 3
-	saveToBead = ""
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
