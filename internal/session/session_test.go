@@ -24,7 +24,7 @@ func TestSessionStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	// Start should initialize the session with AGENTS.md path
 	ctx := context.Background()
@@ -47,7 +47,7 @@ func TestSessionStartWithInvalidPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	err = sess.Start(ctx, "/nonexistent/AGENTS.md")
@@ -65,7 +65,7 @@ func TestSessionSend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)
@@ -102,7 +102,7 @@ func TestSessionSendWithoutStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	_, err = sess.Send(ctx, "echo 'hello'")
@@ -118,7 +118,7 @@ func TestSessionContextUsage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	// Before Start, context usage should be 0
 	usage := sess.ContextUsage()
@@ -211,7 +211,7 @@ func TestSessionAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	// Agent() should return the same agent
 	returnedAgent := sess.Agent()
@@ -233,7 +233,7 @@ func TestManagerCreateSession(t *testing.T) {
 	if sess == nil {
 		t.Error("CreateSession() returned nil session")
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 }
 
 // TestManagerCreateSessionWithUnauthenticatedAgent tests that creation fails for unauthenticated agent
@@ -252,7 +252,7 @@ func TestManagerShouldRespawn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	// With 0% context usage, should not respawn at 50% threshold
 	if mgr.ShouldRespawn(sess, 0.5) {
@@ -277,7 +277,7 @@ func TestSessionMultipleSends(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	ctx := context.Background()
 	agentsPath := newTestAgentsFile(t)

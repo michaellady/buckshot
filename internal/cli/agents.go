@@ -24,7 +24,7 @@ Each agent is checked for installation and authentication status.`,
 func runAgents(cmd *cobra.Command, args []string) error {
 	out := cmd.OutOrStdout()
 
-	fmt.Fprintf(out, "Detecting available agents...\n\n")
+	_, _ = fmt.Fprintf(out, "Detecting available agents...\n\n")
 
 	detector := agent.NewDetector()
 	agents, err := detector.DetectAll()
@@ -33,15 +33,15 @@ func runAgents(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(agents) == 0 {
-		fmt.Fprintf(out, "No agents found.\n")
-		fmt.Fprintf(out, "\nSupported agents:\n")
+		_, _ = fmt.Fprintf(out, "No agents found.\n")
+		_, _ = fmt.Fprintf(out, "\nSupported agents:\n")
 		for name := range agent.KnownAgents() {
-			fmt.Fprintf(out, "  - %s\n", name)
+			_, _ = fmt.Fprintf(out, "  - %s\n", name)
 		}
 		return nil
 	}
 
-	fmt.Fprintf(out, "Found %d agent(s):\n\n", len(agents))
+	_, _ = fmt.Fprintf(out, "Found %d agent(s):\n\n", len(agents))
 
 	for _, a := range agents {
 		status := "✗ not authenticated"
@@ -49,11 +49,11 @@ func runAgents(cmd *cobra.Command, args []string) error {
 			status = "✓ ready"
 		}
 
-		fmt.Fprintf(out, "  %s\n", a.Name)
-		fmt.Fprintf(out, "    Path: %s\n", a.Path)
-		fmt.Fprintf(out, "    Version: %s\n", a.Version)
-		fmt.Fprintf(out, "    Status: %s\n", status)
-		fmt.Fprintf(out, "\n")
+		_, _ = fmt.Fprintf(out, "  %s\n", a.Name)
+		_, _ = fmt.Fprintf(out, "    Path: %s\n", a.Path)
+		_, _ = fmt.Fprintf(out, "    Version: %s\n", a.Version)
+		_, _ = fmt.Fprintf(out, "    Status: %s\n", status)
+		_, _ = fmt.Fprintf(out, "\n")
 	}
 
 	return nil

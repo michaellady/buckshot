@@ -20,6 +20,16 @@ var (
 	saveToBead     string
 )
 
+// agentDetector is the function used to detect agents.
+// It can be overridden in tests to inject mock agents.
+var agentDetector = defaultAgentDetector
+
+// defaultAgentDetector returns agents using the standard detector
+func defaultAgentDetector() ([]agent.Agent, error) {
+	detector := agent.NewDetector()
+	return detector.DetectAll()
+}
+
 var planCmd = &cobra.Command{
 	Use:   "plan [prompt]",
 	Short: "Run multi-agent planning protocol",
@@ -39,12 +49,11 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	prompt := args[0]
 	out := cmd.OutOrStdout()
 
-	fmt.Fprintf(out, "Planning: %s\n", prompt)
-	fmt.Fprintf(out, "Rounds: %d, Agents path: %s\n", rounds, agentsPath)
+	_, _ = fmt.Fprintf(out, "Planning: %s\n", prompt)
+	_, _ = fmt.Fprintf(out, "Rounds: %d, Agents path: %s\n", rounds, agentsPath)
 
-	// Detect available agents
-	detector := agent.NewDetector()
-	agents, err := detector.DetectAll()
+	// Detect available agents (uses agentDetector which can be overridden in tests)
+	agents, err := agentDetector()
 	if err != nil {
 		return fmt.Errorf("failed to detect agents: %w", err)
 	}
@@ -63,18 +72,18 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(authAgents) == 0 {
-		fmt.Fprintf(out, "No authenticated agents available\n")
+		_, _ = fmt.Fprintf(out, "No authenticated agents available\n")
 		return nil
 	}
 
-	fmt.Fprintf(out, "Using %d agent(s): ", len(authAgents))
+	_, _ = fmt.Fprintf(out, "Using %d agent(s): ", len(authAgents))
 	for i, a := range authAgents {
 		if i > 0 {
-			fmt.Fprintf(out, ", ")
+			_, _ = fmt.Fprintf(out, ", ")
 		}
-		fmt.Fprintf(out, "%s", a.Name)
+		_, _ = fmt.Fprintf(out, "%s", a.Name)
 	}
-	fmt.Fprintf(out, "\n")
+	_, _ = fmt.Fprintf(out, "\n")
 
 	// Set up orchestrator
 	orch := orchestrator.NewRoundOrchestrator()
@@ -88,7 +97,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	var noteSaver notes.Saver
 	if saveToBead != "" {
 		noteSaver = notes.NewSaver()
-		fmt.Fprintf(out, "Saving perspectives to: %s\n", saveToBead)
+		_, _ = fmt.Fprintf(out, "Saving perspectives to: %s\n", saveToBead)
 	}
 
 	// Build initial planning context
@@ -105,7 +114,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 
 	for round := 1; round <= maxRounds; round++ {
-		fmt.Fprintf(out, "\n=== Round %d ===\n", round)
+		_, _ = fmt.Fprintf(out, "\n=== Round %d ===\n", round)
 
 		planCtx.Round = round
 		planCtx.IsFirstTurn = (round == 1)
@@ -116,31 +125,31 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		}
 
 		// Report results
-		fmt.Fprintf(out, "Changes: %d, Failed: %d, Skipped: %d\n",
+		_, _ = fmt.Fprintf(out, "Changes: %d, Failed: %d, Skipped: %d\n",
 			result.TotalChanges, result.FailedCount, result.SkippedCount)
 
 		// Save perspectives to bead if --save flag is set
 		if noteSaver != nil {
 			if err := noteSaver.SaveRoundResults(cmd.Context(), saveToBead, result); err != nil {
-				fmt.Fprintf(out, "Warning: failed to save perspectives: %v\n", err)
+				_, _ = fmt.Fprintf(out, "Warning: failed to save perspectives: %v\n", err)
 			} else {
-				fmt.Fprintf(out, "Saved round %d perspectives to %s\n", round, saveToBead)
+				_, _ = fmt.Fprintf(out, "Saved round %d perspectives to %s\n", round, saveToBead)
 			}
 		}
 
 		// Check convergence
 		if untilConverged && convDetector.CheckConvergence(result) {
-			fmt.Fprintf(out, "\nConverged after %d round(s)\n", round)
+			_, _ = fmt.Fprintf(out, "\nConverged after %d round(s)\n", round)
 			break
 		}
 
 		if !untilConverged && round >= rounds {
-			fmt.Fprintf(out, "\nCompleted %d round(s)\n", rounds)
+			_, _ = fmt.Fprintf(out, "\nCompleted %d round(s)\n", rounds)
 			break
 		}
 	}
 
-	fmt.Fprintf(out, "\nPlanning complete.\n")
+	_, _ = fmt.Fprintf(out, "\nPlanning complete.\n")
 	return nil
 }
 

@@ -94,7 +94,7 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			result.AgentResults = append(result.AgentResults, agentResult)
 			continue
 		}
-		defer sess.Close()
+		defer func() { _ = sess.Close() }()
 
 		// Start the session
 		if err := sess.Start(ctx, planCtx.AgentsPath); err != nil {
