@@ -31,8 +31,9 @@ test-integration: build-mockagent
 	go test -v -tags=integration ./...
 
 # Run e2e tests against real agents (requires authenticated agents)
+# Timeout extended to 30m due to real agent invocation times
 test-e2e:
-	go test -v -tags=e2e ./...
+	go test -v -tags=e2e -timeout 30m ./...
 
 # Run linter
 lint:
