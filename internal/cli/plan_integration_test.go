@@ -24,6 +24,11 @@ func TestPlanCommand_Integration_WithMockAgent(t *testing.T) {
 	// Setup mock agent
 	mockSetup := testutil.SetupMockAgent(t, "mock-claude", testutil.DefaultMockConfig())
 
+	// Verify mock agent is configured correctly
+	if !mockSetup.Agent.Authenticated {
+		t.Fatalf("Mock agent should be authenticated, got Authenticated=%v", mockSetup.Agent.Authenticated)
+	}
+
 	// Setup test AGENTS.md
 	agentsPath := testutil.CreateTestAgentsFile(t, "")
 
@@ -39,12 +44,11 @@ func TestPlanCommand_Integration_WithMockAgent(t *testing.T) {
 		t.Fatalf("Failed to change to work directory: %v", err)
 	}
 
-	// Override agent detector to use our mock
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	// Override agent detector to use our mock (with synchronization)
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return []agent.Agent{mockSetup.Agent}, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
 
 	// Run plan command
 	buf := new(bytes.Buffer)
@@ -96,12 +100,11 @@ func TestPlanCommand_Integration_NoAuthenticatedAgents(t *testing.T) {
 
 	agentsPath := testutil.CreateTestAgentsFile(t, "")
 
-	// Override detector
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	// Override detector (with synchronization)
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return []agent.Agent{mockSetup.Agent}, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -150,11 +153,10 @@ func TestPlanCommand_Integration_MultipleAgents(t *testing.T) {
 		agents = append(agents, s.Agent)
 	}
 
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return agents, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -208,11 +210,10 @@ func TestPlanCommand_Integration_AgentSelection(t *testing.T) {
 		agents = append(agents, s.Agent)
 	}
 
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return agents, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
 
 	// Reset the selectedAgents flag before test
 	selectedAgents = nil
@@ -262,14 +263,16 @@ func TestPlanCommand_Integration_Convergence(t *testing.T) {
 	defer os.Chdir(origDir)
 	os.Chdir(workDir)
 
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return []agent.Agent{mockSetup.Agent}, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
 
-	// Reset flags
+	// Reset ALL flags (important: previous tests may have set these)
+	selectedAgents = nil
 	untilConverged = false
+	rounds = 3
+	saveToBead = ""
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -316,11 +319,10 @@ func TestPlanCommand_Integration_ErrorHandling(t *testing.T) {
 	defer os.Chdir(origDir)
 	os.Chdir(workDir)
 
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return []agent.Agent{mockSetup.Agent}, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
@@ -368,11 +370,16 @@ func TestPlanCommand_Integration_ContextUsageTracking(t *testing.T) {
 	defer os.Chdir(origDir)
 	os.Chdir(workDir)
 
-	origDetector := agentDetector
-	agentDetector = func() ([]agent.Agent, error) {
+	restore := setAgentDetector(func() ([]agent.Agent, error) {
 		return []agent.Agent{mockSetup.Agent}, nil
-	}
-	defer func() { agentDetector = origDetector }()
+	})
+	defer restore()
+
+	// Reset ALL flags (important: previous tests may have set these)
+	selectedAgents = nil
+	untilConverged = false
+	rounds = 3
+	saveToBead = ""
 
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
