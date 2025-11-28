@@ -56,9 +56,30 @@ func (p *CodexParser) extractFromLine(line string) string {
 	switch eventType {
 	case "item":
 		return p.extractFromItem(event)
+	case "item.completed":
+		return p.extractFromItemCompleted(event)
 	case "aggregated_output":
 		if output, ok := event["output"].(string); ok {
 			return output
+		}
+	}
+
+	return ""
+}
+
+// extractFromItemCompleted extracts content from an item.completed event (actual Codex format).
+func (p *CodexParser) extractFromItemCompleted(event map[string]interface{}) string {
+	item, ok := event["item"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	itemType, _ := item["type"].(string)
+
+	switch itemType {
+	case "agent_message", "reasoning":
+		if text, ok := item["text"].(string); ok {
+			return text
 		}
 	}
 
