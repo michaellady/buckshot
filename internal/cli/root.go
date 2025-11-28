@@ -22,4 +22,5 @@ func Execute(version string) error {
 func init() {
 	rootCmd.AddCommand(planCmd)
 	rootCmd.AddCommand(agentsCmd)
+	rootCmd.AddCommand(feedbackCmd)
 }

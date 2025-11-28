@@ -309,3 +309,209 @@ func TestBuild_IncludesBeadDependencies(t *testing.T) {
 		t.Error("BeadsState should include dependency information from bd show output")
 	}
 }
+
+// ============================================================================
+// Feedback Mode Tests (RED - buckshot-mzm)
+// ============================================================================
+
+func TestFormatFeedback_ReturnsNonEmptyOutput(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "claude",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	if output == "" {
+		t.Fatal("FormatFeedback() should return non-empty output")
+	}
+}
+
+func TestFormatFeedback_IncludesCommentOnlyInstruction(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "claude",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should instruct agent to only add comments
+	if !strings.Contains(output, "comment") {
+		t.Error("FormatFeedback() should include instruction about comments")
+	}
+}
+
+func TestFormatFeedback_IncludesAgentNameAsAuthor(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "claude",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should include agent name for use as comment author
+	if !strings.Contains(output, "claude") {
+		t.Error("FormatFeedback() should include agent name")
+	}
+
+	// Should mention --author flag
+	if !strings.Contains(output, "--author") {
+		t.Error("FormatFeedback() should mention --author flag for bd comment")
+	}
+}
+
+func TestFormatFeedback_ProhibitsModifyingDescriptions(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "gemini",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should NOT include positive instructions to modify beads (e.g., "Use `bd update`")
+	// But mentioning them in prohibition context is OK (e.g., "Do not use `bd update`")
+	prohibitedPatterns := []string{
+		"Use `bd update`",
+		"Use `bd create`",
+		"- Use `bd update",
+		"- Use `bd create",
+	}
+
+	for _, pattern := range prohibitedPatterns {
+		if strings.Contains(output, pattern) {
+			t.Errorf("FormatFeedback() should NOT contain positive instruction %q", pattern)
+		}
+	}
+
+	// Should explicitly say not to modify descriptions
+	if !strings.Contains(strings.ToLower(output), "do not") || !strings.Contains(strings.ToLower(output), "description") {
+		t.Error("FormatFeedback() should explicitly prohibit modifying descriptions")
+	}
+}
+
+func TestFormatFeedback_IncludesBdCommentCommand(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "amp",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should include the bd comment command
+	if !strings.Contains(output, "bd comment") {
+		t.Error("FormatFeedback() should include 'bd comment' instruction")
+	}
+}
+
+func TestFormatFeedback_IncludesBeadsState(t *testing.T) {
+	builder := NewBuilder()
+
+	beadsState := "buckshot-abc [P1] [epic] open - Main epic\nbuckshot-def [P2] [task] open - Sub task"
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   beadsState,
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "codex",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should include the beads state
+	if !strings.Contains(output, "buckshot-abc") {
+		t.Error("FormatFeedback() should include the beads state")
+	}
+}
+
+func TestFormatFeedback_IncludesAgentsPath(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/custom/path/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "auggie",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should include path to AGENTS.md
+	if !strings.Contains(output, "/custom/path/AGENTS.md") {
+		t.Error("FormatFeedback() should include the AGENTS.md path")
+	}
+}
+
+func TestFormatFeedback_IncludesSubstantiveCommentGuidance(t *testing.T) {
+	builder := NewBuilder()
+
+	ctx := PlanningContext{
+		Prompt:       "Review the planning",
+		AgentsPath:   "/path/to/AGENTS.md",
+		BeadsState:   "buckshot-123 [P1] [task] open - Test task",
+		Round:        1,
+		IsFirstTurn:  true,
+		FeedbackMode: true,
+		AgentName:    "claude",
+	}
+
+	output := builder.FormatFeedback(ctx)
+
+	// Should guide agent to leave substantive comments
+	substantiveKeywords := []string{
+		"substantive",
+		"different",
+		"better",
+	}
+
+	foundAny := false
+	for _, keyword := range substantiveKeywords {
+		if strings.Contains(strings.ToLower(output), keyword) {
+			foundAny = true
+			break
+		}
+	}
+
+	if !foundAny {
+		t.Error("FormatFeedback() should guide agent to leave substantive comments (different or better than existing)")
+	}
+}

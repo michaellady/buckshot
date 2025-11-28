@@ -302,6 +302,10 @@ func (m *mockContextBuilder) Format(ctx buckctx.PlanningContext) string {
 	return ctx.Prompt
 }
 
+func (m *mockContextBuilder) FormatFeedback(ctx buckctx.PlanningContext) string {
+	return ctx.Prompt
+}
+
 func (m *mockContextBuilder) RefreshBeadsState(ctx *buckctx.PlanningContext) error {
 	m.refreshCalls++
 	if m.currentIdx < len(m.beadsStates) {

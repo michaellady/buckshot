@@ -10,11 +10,13 @@ import (
 
 // PlanningContext represents the context sent to an agent.
 type PlanningContext struct {
-	Prompt      string // The user's original prompt
-	AgentsPath  string // Path to AGENTS.md for agent to read
-	BeadsState  string // Current state of beads (bd list + bd show)
-	Round       int    // Current round number
-	IsFirstTurn bool   // Whether this is the first agent in the protocol
+	Prompt       string // The user's original prompt
+	AgentsPath   string // Path to AGENTS.md for agent to read
+	BeadsState   string // Current state of beads (bd list + bd show)
+	Round        int    // Current round number
+	IsFirstTurn  bool   // Whether this is the first agent in the protocol
+	FeedbackMode bool   // Whether agent is in comment-only feedback mode
+	AgentName    string // Name of the agent (used as comment author in feedback mode)
 }
 
 // Builder constructs planning contexts for agents.
@@ -24,6 +26,10 @@ type Builder interface {
 
 	// Format converts a PlanningContext to a prompt string.
 	Format(ctx PlanningContext) string
+
+	// FormatFeedback converts a PlanningContext to a feedback-only prompt string.
+	// In feedback mode, agents can only add comments to beads, not modify them.
+	FormatFeedback(ctx PlanningContext) string
 
 	// RefreshBeadsState updates the beads state in the context.
 	RefreshBeadsState(ctx *PlanningContext) error
@@ -83,6 +89,45 @@ func (b *defaultBuilder) Format(ctx PlanningContext) string {
 	fmt.Fprintln(&buf, "- Use `bd update` to modify existing beads")
 	fmt.Fprintln(&buf, "- Use `bd close` to close completed beads")
 	fmt.Fprintln(&buf, "- Report changes made and whether plan seems complete")
+
+	return buf.String()
+}
+
+// FormatFeedback converts a PlanningContext to a feedback-only prompt string.
+// In feedback mode, agents can only add comments to beads, not modify them.
+func (b *defaultBuilder) FormatFeedback(ctx PlanningContext) string {
+	var buf bytes.Buffer
+
+	// First turn includes guidance to read AGENTS.md
+	if ctx.IsFirstTurn {
+		fmt.Fprintf(&buf, "please read and apply %s\n\n", ctx.AgentsPath)
+	}
+
+	// Main feedback instruction
+	fmt.Fprintln(&buf, "## Feedback Mode (Comment-Only)")
+	fmt.Fprintln(&buf, "")
+	fmt.Fprintln(&buf, "Please ultrathink to read and analyze the repository and the beads task descriptions and comments.")
+	fmt.Fprintln(&buf, "Leave comments with your CLI name as the author in any issues that require your input that is")
+	fmt.Fprintln(&buf, "substantially different or better from the content that is already there.")
+	fmt.Fprintln(&buf, "")
+	fmt.Fprintln(&buf, "**IMPORTANT: Do not edit the description or anything else related to the beads besides adding your comments.**")
+	fmt.Fprintln(&buf, "")
+
+	// Agent identification
+	fmt.Fprintf(&buf, "Your agent name: %s\n\n", ctx.AgentName)
+
+	// AGENTS.md path
+	fmt.Fprintf(&buf, "AGENTS.md: %s\n\n", ctx.AgentsPath)
+
+	// Current beads state
+	fmt.Fprintf(&buf, "Current Beads:\n%s\n\n", ctx.BeadsState)
+
+	// Instructions for commenting only
+	fmt.Fprintln(&buf, "Instructions:")
+	fmt.Fprintf(&buf, "- Use `bd comment <issue-id> \"<comment>\" --author %s` to add comments\n", ctx.AgentName)
+	fmt.Fprintln(&buf, "- Only comment on issues where you have substantive input that is different or better")
+	fmt.Fprintln(&buf, "- Do not use `bd update` or `bd create` - this is comment-only mode")
+	fmt.Fprintln(&buf, "- Read existing comments before adding yours to avoid redundancy")
 
 	return buf.String()
 }
