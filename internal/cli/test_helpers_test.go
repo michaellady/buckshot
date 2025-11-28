@@ -43,3 +43,12 @@ func resetPlanFlags() {
 	saveToBead = ""
 	verbose = false
 }
+
+// resetFeedbackFlags resets all feedback command flags to their default values.
+// This MUST be called at the start of each integration test to ensure clean state.
+//
+//nolint:unused // Used by integration tests (//go:build integration)
+func resetFeedbackFlags() {
+	feedbackAgent = ""
+	agentsPath = ""
+}
