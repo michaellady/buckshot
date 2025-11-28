@@ -10,11 +10,13 @@ import (
 
 // PlanningContext represents the context sent to an agent.
 type PlanningContext struct {
-	Prompt      string // The user's original prompt
-	AgentsPath  string // Path to AGENTS.md for agent to read
-	BeadsState  string // Current state of beads (bd list + bd show)
-	Round       int    // Current round number
-	IsFirstTurn bool   // Whether this is the first agent in the protocol
+	Prompt       string // The user's original prompt
+	AgentsPath   string // Path to AGENTS.md for agent to read
+	BeadsState   string // Current state of beads (bd list + bd show)
+	Round        int    // Current round number
+	IsFirstTurn  bool   // Whether this is the first agent in the protocol
+	FeedbackMode bool   // Whether agent is in comment-only feedback mode
+	AgentName    string // Name of the agent (used as comment author in feedback mode)
 }
 
 // Builder constructs planning contexts for agents.
@@ -24,6 +26,10 @@ type Builder interface {
 
 	// Format converts a PlanningContext to a prompt string.
 	Format(ctx PlanningContext) string
+
+	// FormatFeedback converts a PlanningContext to a feedback-only prompt string.
+	// In feedback mode, agents can only add comments to beads, not modify them.
+	FormatFeedback(ctx PlanningContext) string
 
 	// RefreshBeadsState updates the beads state in the context.
 	RefreshBeadsState(ctx *PlanningContext) error
@@ -85,6 +91,13 @@ func (b *defaultBuilder) Format(ctx PlanningContext) string {
 	fmt.Fprintln(&buf, "- Report changes made and whether plan seems complete")
 
 	return buf.String()
+}
+
+// FormatFeedback converts a PlanningContext to a feedback-only prompt string.
+// RED: Stub implementation - will be implemented in GREEN phase.
+func (b *defaultBuilder) FormatFeedback(ctx PlanningContext) string {
+	// TODO: Implement feedback mode prompt formatting
+	return ""
 }
 
 // RefreshBeadsState updates the beads state in the context.
