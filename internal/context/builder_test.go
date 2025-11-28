@@ -396,15 +396,18 @@ func TestFormatFeedback_ProhibitsModifyingDescriptions(t *testing.T) {
 
 	output := builder.FormatFeedback(ctx)
 
-	// Should NOT include instructions to modify beads
-	prohibitedKeywords := []string{
-		"bd update",
-		"bd create",
+	// Should NOT include positive instructions to modify beads (e.g., "Use `bd update`")
+	// But mentioning them in prohibition context is OK (e.g., "Do not use `bd update`")
+	prohibitedPatterns := []string{
+		"Use `bd update`",
+		"Use `bd create`",
+		"- Use `bd update",
+		"- Use `bd create",
 	}
 
-	for _, keyword := range prohibitedKeywords {
-		if strings.Contains(output, keyword) {
-			t.Errorf("FormatFeedback() should NOT contain %q (modifying beads is prohibited)", keyword)
+	for _, pattern := range prohibitedPatterns {
+		if strings.Contains(output, pattern) {
+			t.Errorf("FormatFeedback() should NOT contain positive instruction %q", pattern)
 		}
 	}
 

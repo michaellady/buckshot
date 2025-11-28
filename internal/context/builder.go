@@ -94,10 +94,42 @@ func (b *defaultBuilder) Format(ctx PlanningContext) string {
 }
 
 // FormatFeedback converts a PlanningContext to a feedback-only prompt string.
-// RED: Stub implementation - will be implemented in GREEN phase.
+// In feedback mode, agents can only add comments to beads, not modify them.
 func (b *defaultBuilder) FormatFeedback(ctx PlanningContext) string {
-	// TODO: Implement feedback mode prompt formatting
-	return ""
+	var buf bytes.Buffer
+
+	// First turn includes guidance to read AGENTS.md
+	if ctx.IsFirstTurn {
+		fmt.Fprintf(&buf, "please read and apply %s\n\n", ctx.AgentsPath)
+	}
+
+	// Main feedback instruction
+	fmt.Fprintln(&buf, "## Feedback Mode (Comment-Only)")
+	fmt.Fprintln(&buf, "")
+	fmt.Fprintln(&buf, "Please ultrathink to read and analyze the repository and the beads task descriptions and comments.")
+	fmt.Fprintln(&buf, "Leave comments with your CLI name as the author in any issues that require your input that is")
+	fmt.Fprintln(&buf, "substantially different or better from the content that is already there.")
+	fmt.Fprintln(&buf, "")
+	fmt.Fprintln(&buf, "**IMPORTANT: Do not edit the description or anything else related to the beads besides adding your comments.**")
+	fmt.Fprintln(&buf, "")
+
+	// Agent identification
+	fmt.Fprintf(&buf, "Your agent name: %s\n\n", ctx.AgentName)
+
+	// AGENTS.md path
+	fmt.Fprintf(&buf, "AGENTS.md: %s\n\n", ctx.AgentsPath)
+
+	// Current beads state
+	fmt.Fprintf(&buf, "Current Beads:\n%s\n\n", ctx.BeadsState)
+
+	// Instructions for commenting only
+	fmt.Fprintln(&buf, "Instructions:")
+	fmt.Fprintf(&buf, "- Use `bd comment <issue-id> \"<comment>\" --author %s` to add comments\n", ctx.AgentName)
+	fmt.Fprintln(&buf, "- Only comment on issues where you have substantive input that is different or better")
+	fmt.Fprintln(&buf, "- Do not use `bd update` or `bd create` - this is comment-only mode")
+	fmt.Fprintln(&buf, "- Read existing comments before adding yours to avoid redundancy")
+
+	return buf.String()
 }
 
 // RefreshBeadsState updates the beads state in the context.
