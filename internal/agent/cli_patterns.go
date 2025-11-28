@@ -50,6 +50,52 @@
 //	  --output-format json \
 //	  --force
 //
+// ## Auggie (`auggie`)
+//
+// Binary: auggie (typically /opt/homebrew/bin/auggie)
+// Version check: auggie --version
+// Non-interactive mode: -p, --print (one-shot mode)
+// JSON output: --output-format json
+// Skip approvals: --permission "tool-name:allow" (per-tool)
+// Working directory: -w, --workspace-root <path>
+// Resume session: -r, --resume [sessionId]
+//
+// Example:
+//
+//	auggie "Create a hello world function" \
+//	  --print \
+//	  --output-format json
+//
+// ## Gemini CLI (`gemini`)
+//
+// Binary: gemini (typically /opt/homebrew/bin/gemini)
+// Version check: gemini --version
+// Non-interactive mode: positional prompt (one-shot by default)
+// JSON output: -o, --output-format stream-json
+// Skip approvals: -y, --yolo or --approval-mode yolo
+// Resume session: -r, --resume [sessionId | "latest"]
+//
+// Example:
+//
+//	gemini "Create a hello world function" \
+//	  --output-format stream-json \
+//	  --yolo
+//
+// ## Amp (`amp`)
+//
+// Binary: amp (typically ~/.local/bin/amp)
+// Version check: amp --version
+// Non-interactive mode: -x, --execute [message]
+// JSON output: --stream-json (Claude Code-compatible)
+// Skip approvals: --dangerously-allow-all
+// Resume session: amp threads continue
+//
+// Example:
+//
+//	amp --execute "Create a hello world function" \
+//	  --stream-json \
+//	  --dangerously-allow-all
+//
 // ## Context Usage Tracking
 //
 // None of the CLIs directly expose context usage percentage.
@@ -131,6 +177,39 @@ func KnownAgents() map[string]CLIPattern {
 			SystemPromptArg:    "", // Not directly supported
 			WorkspaceDirArg:    "--workspace",
 			ResumeSessionArg:   "--resume",
+		},
+		"auggie": {
+			Binary:             "auggie",
+			VersionArgs:        []string{"--version"},
+			AuthCheckCmd:       []string{"--version"}, // Auth checked on first real command
+			NonInteractiveArgs: []string{"--print"},
+			JSONOutputArgs:     []string{"--output-format", "json"},
+			SkipApprovalsArgs:  []string{}, // Per-tool permissions only
+			SystemPromptArg:    "--rules",
+			WorkspaceDirArg:    "--workspace-root",
+			ResumeSessionArg:   "--resume",
+		},
+		"gemini": {
+			Binary:             "gemini",
+			VersionArgs:        []string{"--version"},
+			AuthCheckCmd:       []string{"--version"}, // Auth checked on first real command
+			NonInteractiveArgs: []string{},            // Positional prompt is one-shot by default
+			JSONOutputArgs:     []string{"--output-format", "stream-json"},
+			SkipApprovalsArgs:  []string{"--yolo"},
+			SystemPromptArg:    "", // Not directly supported
+			WorkspaceDirArg:    "", // Uses current directory
+			ResumeSessionArg:   "--resume",
+		},
+		"amp": {
+			Binary:             "amp",
+			VersionArgs:        []string{"--version"},
+			AuthCheckCmd:       []string{"--version"}, // Auth checked on first real command
+			NonInteractiveArgs: []string{"--execute"},
+			JSONOutputArgs:     []string{"--stream-json"},
+			SkipApprovalsArgs:  []string{"--dangerously-allow-all"},
+			SystemPromptArg:    "", // Not directly supported
+			WorkspaceDirArg:    "", // Uses current directory
+			ResumeSessionArg:   "", // Uses `amp threads continue`
 		},
 	}
 }

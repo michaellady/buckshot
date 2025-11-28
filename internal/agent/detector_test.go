@@ -48,6 +48,9 @@ func TestIsInstalled(t *testing.T) {
 		{"claude", "claude"},
 		{"codex", "codex"},
 		{"cursor-agent", "cursor-agent"},
+		{"auggie", "auggie"},
+		{"gemini", "gemini"},
+		{"amp", "amp"},
 	}
 
 	for _, tt := range tests {
@@ -120,6 +123,9 @@ func TestDetectAllReturnsKnownAgents(t *testing.T) {
 		"claude":       true,
 		"codex":        true,
 		"cursor-agent": true,
+		"auggie":       true,
+		"gemini":       true,
+		"amp":          true,
 	}
 
 	for _, agent := range agents {

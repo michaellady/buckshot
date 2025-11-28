@@ -16,6 +16,9 @@ Buckshot looks for the following CLI tools:
   - claude (Claude Code)
   - codex (OpenAI Codex CLI)
   - cursor-agent (Cursor Agent)
+  - auggie (Augment Code)
+  - gemini (Google Gemini CLI)
+  - amp (Amp CLI)
 
 Each agent is checked for installation and authentication status.`,
 	RunE: runAgents,
