@@ -35,6 +35,7 @@ func (d *DefaultDetector) DetectAll() ([]Agent, error) {
 				Name:    name,
 				Path:    d.GetAgentPath(name),
 				Pattern: pattern,
+				Parser:  GetParserForAgent(name),
 			}
 
 			// Get version
@@ -48,6 +49,26 @@ func (d *DefaultDetector) DetectAll() ([]Agent, error) {
 	}
 
 	return agents, nil
+}
+
+// GetParserForAgent returns the appropriate output parser for a given agent.
+func GetParserForAgent(name string) OutputParser {
+	switch name {
+	case "claude":
+		return &ClaudeParser{}
+	case "codex":
+		return &CodexParser{}
+	case "cursor-agent":
+		return &CursorParser{}
+	case "auggie":
+		return &AuggieParser{}
+	case "gemini":
+		return &GeminiParser{}
+	case "amp":
+		return &AmpParser{}
+	default:
+		return &NoopParser{}
+	}
 }
 
 // IsInstalled checks if a specific agent is installed.
