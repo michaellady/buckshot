@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/michaellady/buckshot/internal/agent"
 	"github.com/michaellady/buckshot/internal/convergence"
@@ -18,7 +20,58 @@ var (
 	selectedAgents []string
 	untilConverged bool
 	saveToBead     string
+	verbose        bool
 )
+
+// terminalProgressReporter implements orchestrator.ProgressReporter for terminal output.
+type terminalProgressReporter struct {
+	out       io.Writer
+	startTime time.Time
+}
+
+func newTerminalProgressReporter(out io.Writer) *terminalProgressReporter {
+	return &terminalProgressReporter{out: out}
+}
+
+func (r *terminalProgressReporter) OnAgentStart(round, agentIndex, totalAgents int, ag agent.Agent) {
+	r.startTime = time.Now()
+	_, _ = fmt.Fprintf(r.out, "\n  [Round %d] Agent %d/%d: %s - STARTED\n", round, agentIndex, totalAgents, ag.Name)
+}
+
+func (r *terminalProgressReporter) OnAgentComplete(round, agentIndex, totalAgents int, result orchestrator.AgentResult, beadsDiff string) {
+	elapsed := time.Since(r.startTime)
+	status := "COMPLETED"
+	if result.Error != nil {
+		status = fmt.Sprintf("FAILED: %v", result.Error)
+	} else if result.Skipped {
+		status = "SKIPPED"
+	}
+	_, _ = fmt.Fprintf(r.out, "  [Round %d] Agent %d/%d: %s - %s (%.1fs)\n", round, agentIndex, totalAgents, result.Agent.Name, status, elapsed.Seconds())
+	if beadsDiff != "" && beadsDiff != "(no changes)" && !result.Skipped {
+		_, _ = fmt.Fprintf(r.out, "  Beads diff:\n")
+		// Indent the diff output
+		for _, line := range splitDiffLines(beadsDiff) {
+			if line != "" {
+				_, _ = fmt.Fprintf(r.out, "    %s\n", line)
+			}
+		}
+	}
+}
+
+func splitDiffLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
 
 // agentDetector is the function used to detect agents.
 // It can be overridden in tests to inject mock agents.
@@ -89,6 +142,11 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	orch := orchestrator.NewRoundOrchestrator()
 	orch.SetSessionManager(session.NewManager())
 	orch.SetContextBuilder(buckctx.NewBuilder())
+
+	// Set up progress reporter if verbose mode is enabled
+	if verbose {
+		orch.SetProgressReporter(newTerminalProgressReporter(out))
+	}
 
 	// Set up convergence detector
 	convDetector := convergence.NewDetector()
@@ -175,4 +233,5 @@ func init() {
 	planCmd.Flags().StringSliceVar(&selectedAgents, "agents", nil, "Specific agents to use (default: all available)")
 	planCmd.Flags().BoolVar(&untilConverged, "until-converged", false, "Run until all agents report no changes")
 	planCmd.Flags().StringVar(&saveToBead, "save", "", "Save agent perspectives to specified bead ID")
+	planCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed progress with agent timing and beads diff")
 }

@@ -41,4 +41,5 @@ func resetPlanFlags() {
 	rounds = 3
 	agentsPath = ""
 	saveToBead = ""
+	verbose = false
 }
