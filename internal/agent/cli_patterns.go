@@ -150,7 +150,7 @@ func KnownAgents() map[string]CLIPattern {
 			VersionArgs:        []string{"--version"},
 			AuthCheckCmd:       []string{"--version"}, // Auth checked on first real command
 			NonInteractiveArgs: []string{"-p"},
-			JSONOutputArgs:     []string{"--output-format", "stream-json"},
+			JSONOutputArgs:     []string{"--output-format", "stream-json", "--verbose"},
 			SkipApprovalsArgs:  []string{"--dangerously-skip-permissions"},
 			SystemPromptArg:    "--append-system-prompt",
 			WorkspaceDirArg:    "", // Uses current directory
