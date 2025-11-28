@@ -68,31 +68,24 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 	planCtx.FeedbackMode = true
 	planCtx.AgentName = targetAgent.Name
 
-	// Create session for the agent
-	sessMgr := session.NewManager()
-	sess, err := sessMgr.CreateSession(*targetAgent)
-	if err != nil {
-		return fmt.Errorf("failed to create session: %w", err)
-	}
-	defer func() { _ = sess.Close() }()
-
-	// Start the session
-	if err := sess.Start(cmd.Context(), agentsPath); err != nil {
-		return fmt.Errorf("failed to start session: %w", err)
-	}
-
-	// Format and send the feedback prompt
+	// Format the feedback prompt
 	prompt := builder.FormatFeedback(planCtx)
 
-	_, _ = fmt.Fprintf(out, "Sending feedback prompt to %s...\n", targetAgent.Name)
+	_, _ = fmt.Fprintf(out, "Running %s in one-shot mode...\n", targetAgent.Name)
 
-	resp, err := sess.Send(cmd.Context(), prompt)
+	// Use RunOneShot for one-shot execution (waits for process exit)
+	result, err := session.RunOneShot(cmd.Context(), *targetAgent, prompt)
 	if err != nil {
-		return fmt.Errorf("agent %s failed: %w", targetAgent.Name, err)
+		// Still show output even if there was an error
+		if result.Output != "" {
+			_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
+			_, _ = fmt.Fprintln(out, result.Output)
+		}
+		return fmt.Errorf("agent %s failed (exit code %d): %w", targetAgent.Name, result.ExitCode, err)
 	}
 
 	_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
-	_, _ = fmt.Fprintln(out, resp.Output)
+	_, _ = fmt.Fprintln(out, result.Output)
 
 	_, _ = fmt.Fprintf(out, "\nFeedback complete.\n")
 	return nil
