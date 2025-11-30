@@ -158,3 +158,36 @@ func TestCodexParserHandlesToolCalls(t *testing.T) {
 		t.Errorf("Parse() did not extract tool output, got: %s", result)
 	}
 }
+
+// TestCodexParserExtractsItemCompleted tests extraction from item.completed events (actual Codex format)
+func TestCodexParserExtractsItemCompleted(t *testing.T) {
+	parser := &CodexParser{}
+
+	// This is the ACTUAL format Codex uses (not "item" but "item.completed")
+	input := `{"type":"thread.started","thread_id":"019acb30-bce3-73a2-9c30-f16d264f301f"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Counting words in phrase**"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Greetings friend, hope you're well"}}
+{"type":"turn.completed","usage":{"input_tokens":2973,"output_tokens":12}}`
+
+	result := parser.Parse(input)
+
+	// Should extract the agent_message text
+	if !strings.Contains(result, "Greetings friend, hope you're well") {
+		t.Errorf("Parse() did not extract agent_message from item.completed, got: %s", result)
+	}
+}
+
+// TestCodexParserExtractsReasoningFromItemCompleted tests extraction of reasoning text
+func TestCodexParserExtractsReasoningFromItemCompleted(t *testing.T) {
+	parser := &CodexParser{}
+
+	input := `{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"Let me think about this carefully."}}`
+
+	result := parser.Parse(input)
+
+	// Should extract reasoning text
+	if !strings.Contains(result, "Let me think about this carefully.") {
+		t.Errorf("Parse() did not extract reasoning text, got: %s", result)
+	}
+}

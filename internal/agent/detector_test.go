@@ -186,3 +186,76 @@ func TestGetAgentPath(t *testing.T) {
 		t.Errorf("GetAgentPath('nonexistent-agent') = %q, want empty string", path)
 	}
 }
+
+// TestGetParserForAgent tests that correct parsers are returned for each agent
+func TestGetParserForAgent(t *testing.T) {
+	tests := []struct {
+		name       string
+		agentName  string
+		parserType string
+	}{
+		{"claude parser", "claude", "*agent.ClaudeParser"},
+		{"codex parser", "codex", "*agent.CodexParser"},
+		{"cursor-agent parser", "cursor-agent", "*agent.CursorParser"},
+		{"auggie parser", "auggie", "*agent.AuggieParser"},
+		{"gemini parser", "gemini", "*agent.GeminiParser"},
+		{"amp parser", "amp", "*agent.AmpParser"},
+		{"unknown parser", "unknown", "*agent.NoopParser"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := GetParserForAgent(tt.agentName)
+			if parser == nil {
+				t.Fatalf("GetParserForAgent(%q) returned nil", tt.agentName)
+			}
+
+			// Check type using type assertion
+			switch tt.agentName {
+			case "claude":
+				if _, ok := parser.(*ClaudeParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type", tt.agentName)
+				}
+			case "codex":
+				if _, ok := parser.(*CodexParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type", tt.agentName)
+				}
+			case "cursor-agent":
+				if _, ok := parser.(*CursorParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type", tt.agentName)
+				}
+			case "auggie":
+				if _, ok := parser.(*AuggieParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type", tt.agentName)
+				}
+			case "gemini":
+				if _, ok := parser.(*GeminiParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type", tt.agentName)
+				}
+			case "amp":
+				if _, ok := parser.(*AmpParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type", tt.agentName)
+				}
+			default:
+				if _, ok := parser.(*NoopParser); !ok {
+					t.Errorf("GetParserForAgent(%q) returned wrong type for unknown agent", tt.agentName)
+				}
+			}
+		})
+	}
+}
+
+// TestDetectedAgentsHaveParsers tests that detected agents are assigned parsers
+func TestDetectedAgentsHaveParsers(t *testing.T) {
+	d := NewDetector()
+	agents, err := d.DetectAll()
+	if err != nil {
+		t.Fatalf("DetectAll() error = %v", err)
+	}
+
+	for _, agent := range agents {
+		if agent.Parser == nil {
+			t.Errorf("Agent %q has nil Parser", agent.Name)
+		}
+	}
+}
