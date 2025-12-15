@@ -1,7 +1,9 @@
 package orchestrator
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"testing"
 
 	"github.com/michaellady/buckshot/internal/agent"
@@ -281,7 +283,171 @@ func TestRunRound_SkipsUnauthenticatedAgents(t *testing.T) {
 	}
 }
 
+// TestRunRound_PropagatesOutputStreamToSession tests that SetOutputStream propagates to sessions
+func TestRunRound_PropagatesOutputStreamToSession(t *testing.T) {
+	orch := NewRoundOrchestrator()
+
+	// Use a mock session manager that tracks stream setting
+	mockMgr := &mockStreamingSessionManager{}
+	orch.SetSessionManager(mockMgr)
+	orch.SetContextBuilder(buckctx.NewBuilder())
+
+	// Set output stream on orchestrator
+	var buf bytes.Buffer
+	orch.SetOutputStream(&buf)
+
+	agents := []agent.Agent{
+		{Name: "claude", Authenticated: true},
+	}
+
+	planCtx := buckctx.PlanningContext{
+		Prompt:     "Test prompt",
+		AgentsPath: "/path/to/AGENTS.md",
+		Round:      1,
+	}
+
+	ctx := context.Background()
+	_, err := orch.RunRound(ctx, agents, planCtx)
+	if err != nil {
+		t.Fatalf("RunRound() error = %v", err)
+	}
+
+	// Verify that the session received the output stream
+	if mockMgr.lastSession == nil {
+		t.Fatal("No session was created")
+	}
+
+	streamingSession, ok := mockMgr.lastSession.(*mockStreamingSession)
+	if !ok {
+		t.Fatal("Session is not a mockStreamingSession")
+	}
+
+	if streamingSession.outputStream == nil {
+		t.Error("Session did not receive output stream - SetOutputStream was not called")
+	}
+}
+
+// TestRunRound_OutputStreamIsNilByDefault tests that no stream is set when not configured
+func TestRunRound_OutputStreamIsNilByDefault(t *testing.T) {
+	orch := NewRoundOrchestrator()
+
+	mockMgr := &mockStreamingSessionManager{}
+	orch.SetSessionManager(mockMgr)
+	orch.SetContextBuilder(buckctx.NewBuilder())
+
+	// Don't set output stream
+
+	agents := []agent.Agent{
+		{Name: "claude", Authenticated: true},
+	}
+
+	planCtx := buckctx.PlanningContext{
+		Prompt:     "Test prompt",
+		AgentsPath: "/path/to/AGENTS.md",
+		Round:      1,
+	}
+
+	ctx := context.Background()
+	_, _ = orch.RunRound(ctx, agents, planCtx)
+
+	// Session should not have output stream set
+	if mockMgr.lastSession != nil {
+		streamingSession := mockMgr.lastSession.(*mockStreamingSession)
+		if streamingSession.outputStream != nil {
+			t.Error("Session should not have output stream when orchestrator stream is nil")
+		}
+	}
+}
+
+// TestSetOutputStream_AcceptsWriter tests that SetOutputStream accepts an io.Writer
+func TestSetOutputStream_AcceptsWriter(t *testing.T) {
+	orch := NewRoundOrchestrator()
+
+	// Should not panic
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("SetOutputStream panicked: %v", r)
+		}
+	}()
+
+	var buf bytes.Buffer
+	orch.SetOutputStream(&buf)
+}
+
+// TestSetOutputStream_AcceptsNil tests that SetOutputStream accepts nil
+func TestSetOutputStream_AcceptsNil(t *testing.T) {
+	orch := NewRoundOrchestrator()
+
+	// Should not panic
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("SetOutputStream(nil) panicked: %v", r)
+		}
+	}()
+
+	orch.SetOutputStream(nil)
+}
+
 // Mock implementations for testing
+
+// mockStreamingSessionManager tracks sessions that support streaming
+type mockStreamingSessionManager struct {
+	lastSession session.Session
+}
+
+func (m *mockStreamingSessionManager) CreateSession(a agent.Agent) (session.Session, error) {
+	sess := &mockStreamingSession{agent: a}
+	m.lastSession = sess
+	return sess, nil
+}
+
+func (m *mockStreamingSessionManager) ShouldRespawn(s session.Session, threshold float64) bool {
+	return false
+}
+
+// mockStreamingSession implements Session with SetOutputStream support
+type mockStreamingSession struct {
+	agent        agent.Agent
+	started      bool
+	outputStream io.Writer
+}
+
+func (s *mockStreamingSession) Start(ctx context.Context, agentsPath string) error {
+	s.started = true
+	return nil
+}
+
+func (s *mockStreamingSession) Send(ctx context.Context, prompt string) (session.Response, error) {
+	// Write to output stream if set
+	if s.outputStream != nil {
+		_, _ = s.outputStream.Write([]byte("Mock streaming output\n"))
+	}
+	return session.Response{
+		Output:       "Mock response",
+		ContextUsage: 0.1,
+	}, nil
+}
+
+func (s *mockStreamingSession) ContextUsage() float64 {
+	return 0.1
+}
+
+func (s *mockStreamingSession) IsAlive() bool {
+	return s.started
+}
+
+func (s *mockStreamingSession) Agent() agent.Agent {
+	return s.agent
+}
+
+func (s *mockStreamingSession) Close() error {
+	s.started = false
+	return nil
+}
+
+func (s *mockStreamingSession) SetOutputStream(w io.Writer) {
+	s.outputStream = w
+}
 
 type mockContextBuilder struct {
 	beadsStates  []string
