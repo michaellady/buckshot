@@ -123,7 +123,7 @@ func RunOneShotStreaming(ctx context.Context, ag agent.Agent, prompt string, str
 	for scanner.Scan() {
 		line := scanner.Text()
 		// Write to both stream and buffer
-		fmt.Fprintln(stream, line)
+		_, _ = fmt.Fprintln(stream, line)
 		outputBuf.WriteString(line)
 		outputBuf.WriteString("\n")
 	}
@@ -136,7 +136,7 @@ func RunOneShotStreaming(ctx context.Context, ag agent.Agent, prompt string, str
 	if stderrBuf.Len() > 0 {
 		output += stderrBuf.String()
 		// Also stream stderr
-		fmt.Fprint(stream, stderrBuf.String())
+		_, _ = fmt.Fprint(stream, stderrBuf.String())
 	}
 
 	// Apply parser if available
