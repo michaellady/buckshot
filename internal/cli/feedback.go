@@ -6,6 +6,7 @@ import (
 	"github.com/michaellady/buckshot/internal/agent"
 	buckctx "github.com/michaellady/buckshot/internal/context"
 	"github.com/michaellady/buckshot/internal/session"
+	"github.com/michaellady/buckshot/internal/tracker"
 	"github.com/spf13/cobra"
 )
 
@@ -74,6 +75,15 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 
 	_, _ = fmt.Fprintf(out, "Running %s in one-shot mode...\n", targetAgent.Name)
 
+	// Set up beads tracker if streaming
+	var beadsTracker *tracker.Tracker
+	var beforeState tracker.State
+	if feedbackStreamOutput {
+		beadsTracker = tracker.NewTracker()
+		beforeJSON := runBdListJSON()
+		beforeState, _ = beadsTracker.CaptureState(beforeJSON)
+	}
+
 	var result session.OneShotResult
 
 	if feedbackStreamOutput {
@@ -98,6 +108,17 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 	if !feedbackStreamOutput {
 		_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
 		_, _ = fmt.Fprintln(out, result.Output)
+	}
+
+	// Show beads action summary if streaming with tracker
+	if beadsTracker != nil {
+		afterJSON := runBdListJSON()
+		afterState, _ := beadsTracker.CaptureState(afterJSON)
+		changes := beadsTracker.Diff(beforeState, afterState)
+		summary := changes.FormatSummary()
+		if summary != "No changes" {
+			_, _ = fmt.Fprintf(out, "\n--- Beads Action Summary ---\n%s\n", summary)
+		}
 	}
 
 	_, _ = fmt.Fprintf(out, "\nFeedback complete.\n")

@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"os/exec"
 	"time"
 
 	"github.com/michaellady/buckshot/internal/agent"
@@ -11,6 +12,7 @@ import (
 	"github.com/michaellady/buckshot/internal/notes"
 	"github.com/michaellady/buckshot/internal/orchestrator"
 	"github.com/michaellady/buckshot/internal/session"
+	"github.com/michaellady/buckshot/internal/tracker"
 	"github.com/spf13/cobra"
 )
 
@@ -149,9 +151,11 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		orch.SetProgressReporter(newTerminalProgressReporter(out))
 	}
 
-	// Set up output streaming if --stream flag is set
+	// Set up output streaming and beads tracker if --stream flag is set
+	var beadsTracker *tracker.Tracker
 	if streamOutput {
 		orch.SetOutputStream(out)
+		beadsTracker = tracker.NewTracker()
 		_, _ = fmt.Fprintf(out, "Streaming enabled: agent output will appear in real-time\n")
 	}
 
@@ -184,6 +188,13 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		planCtx.Round = round
 		planCtx.IsFirstTurn = (round == 1)
 
+		// Capture beads state before round if streaming with tracker
+		var beforeState tracker.State
+		if beadsTracker != nil {
+			beforeJSON := runBdListJSON()
+			beforeState, _ = beadsTracker.CaptureState(beforeJSON)
+		}
+
 		result, err := orch.RunRound(cmd.Context(), authAgents, planCtx)
 		if err != nil {
 			return fmt.Errorf("round %d failed: %w", round, err)
@@ -192,6 +203,17 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		// Report results
 		_, _ = fmt.Fprintf(out, "Changes: %d, Failed: %d, Skipped: %d\n",
 			result.TotalChanges, result.FailedCount, result.SkippedCount)
+
+		// Show beads action summary if streaming with tracker
+		if beadsTracker != nil {
+			afterJSON := runBdListJSON()
+			afterState, _ := beadsTracker.CaptureState(afterJSON)
+			changes := beadsTracker.Diff(beforeState, afterState)
+			summary := changes.FormatSummary()
+			if summary != "No changes" {
+				_, _ = fmt.Fprintf(out, "\n--- Beads Action Summary ---\n%s\n", summary)
+			}
+		}
 
 		// Save perspectives to bead if --save flag is set
 		if noteSaver != nil {
@@ -232,6 +254,16 @@ func filterAgents(agents []agent.Agent, selected []string) []agent.Agent {
 		}
 	}
 	return filtered
+}
+
+// runBdListJSON runs 'bd list --json' and returns the output.
+func runBdListJSON() string {
+	cmd := exec.Command("bd", "list", "--json")
+	out, err := cmd.Output()
+	if err != nil {
+		return "[]"
+	}
+	return string(out)
 }
 
 func init() {

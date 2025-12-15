@@ -134,7 +134,6 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			}
 			continue
 		}
-		defer func() { _ = sess.Close() }()
 
 		// Set output stream if configured (for real-time streaming)
 		if o.outputStream != nil {
@@ -151,6 +150,7 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			if o.progressReporter != nil {
 				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, "")
 			}
+			_ = sess.Close()
 			continue
 		}
 
@@ -171,6 +171,7 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 				diff := diffBeadsState(beadsBefore, beadsAfter)
 				o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, diff)
 			}
+			_ = sess.Close()
 			continue
 		}
 
@@ -188,6 +189,9 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			diff := diffBeadsState(beadsBefore, beadsAfter)
 			o.progressReporter.OnAgentComplete(planCtx.Round, i+1, len(agents), agentResult, diff)
 		}
+
+		// Close session immediately after use (not deferred to end of function)
+		_ = sess.Close()
 	}
 
 	// Refresh beads state after all agents for next round

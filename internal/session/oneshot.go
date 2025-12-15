@@ -134,9 +134,14 @@ func RunOneShotStreaming(ctx context.Context, ag agent.Agent, prompt string, str
 	// Combine stdout and stderr
 	output := outputBuf.String()
 	if stderrBuf.Len() > 0 {
-		output += stderrBuf.String()
+		stderrContent := stderrBuf.String()
+		// Add separator if stdout doesn't end with newline
+		if len(output) > 0 && output[len(output)-1] != '\n' {
+			output += "\n"
+		}
+		output += stderrContent
 		// Also stream stderr
-		_, _ = fmt.Fprint(stream, stderrBuf.String())
+		_, _ = fmt.Fprint(stream, stderrContent)
 	}
 
 	// Apply parser if available
