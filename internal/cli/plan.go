@@ -149,6 +149,12 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		orch.SetProgressReporter(newTerminalProgressReporter(out))
 	}
 
+	// Set up output streaming if --stream flag is set
+	if streamOutput {
+		orch.SetOutputStream(out)
+		_, _ = fmt.Fprintf(out, "Streaming enabled: agent output will appear in real-time\n")
+	}
+
 	// Set up convergence detector
 	convDetector := convergence.NewDetector()
 

@@ -3,6 +3,7 @@ package orchestrator
 
 import (
 	"context"
+	"io"
 	"os/exec"
 
 	"github.com/michaellady/buckshot/internal/agent"
@@ -55,6 +56,9 @@ type RoundOrchestrator interface {
 
 	// SetProgressReporter sets the progress reporter for verbose output.
 	SetProgressReporter(reporter ProgressReporter)
+
+	// SetOutputStream sets the writer for real-time output streaming.
+	SetOutputStream(w io.Writer)
 }
 
 // defaultOrchestrator is the default implementation.
@@ -62,6 +66,7 @@ type defaultOrchestrator struct {
 	sessionMgr       session.Manager
 	contextBuilder   buckctx.Builder
 	progressReporter ProgressReporter
+	outputStream     io.Writer
 }
 
 // NewRoundOrchestrator creates a new round orchestrator.
@@ -130,6 +135,13 @@ func (o *defaultOrchestrator) RunRound(ctx context.Context, agents []agent.Agent
 			continue
 		}
 		defer func() { _ = sess.Close() }()
+
+		// Set output stream if configured (for real-time streaming)
+		if o.outputStream != nil {
+			if streamSetter, ok := sess.(interface{ SetOutputStream(io.Writer) }); ok {
+				streamSetter.SetOutputStream(o.outputStream)
+			}
+		}
 
 		// Start the session
 		if err := sess.Start(ctx, planCtx.AgentsPath); err != nil {
@@ -207,6 +219,11 @@ func (o *defaultOrchestrator) SetContextBuilder(builder buckctx.Builder) {
 // SetProgressReporter sets the progress reporter.
 func (o *defaultOrchestrator) SetProgressReporter(reporter ProgressReporter) {
 	o.progressReporter = reporter
+}
+
+// SetOutputStream sets the writer for real-time output streaming.
+func (o *defaultOrchestrator) SetOutputStream(w io.Writer) {
+	o.outputStream = w
 }
 
 // captureBeadsState captures the current beads state by running `bd list --json`.
