@@ -3,6 +3,8 @@ package session
 import (
 	"bytes"
 	"context"
+	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +25,7 @@ func TestSession_SetOutputStream(t *testing.T) {
 	var buf bytes.Buffer
 
 	// This will fail until SetOutputStream is added to Session interface
-	streamSetter, ok := sess.(interface{ SetOutputStream(*bytes.Buffer) })
+	streamSetter, ok := sess.(interface{ SetOutputStream(io.Writer) })
 	if !ok {
 		t.Fatal("Session does not implement SetOutputStream - RED phase expected")
 	}
@@ -51,7 +53,7 @@ func TestSession_StreamsOutputInRealTime(t *testing.T) {
 
 	// Set up output stream
 	var buf bytes.Buffer
-	streamSetter, ok := sess.(interface{ SetOutputStream(*bytes.Buffer) })
+	streamSetter, ok := sess.(interface{ SetOutputStream(io.Writer) })
 	if !ok {
 		t.Fatal("Session does not implement SetOutputStream - RED phase expected")
 	}
@@ -105,7 +107,7 @@ func TestSession_StreamNilWriterNoOp(t *testing.T) {
 	defer func() { _ = sess.Close() }()
 
 	// Setting nil writer should not panic
-	streamSetter, ok := sess.(interface{ SetOutputStream(*bytes.Buffer) })
+	streamSetter, ok := sess.(interface{ SetOutputStream(io.Writer) })
 	if !ok {
 		t.Fatal("Session does not implement SetOutputStream - RED phase expected")
 	}
@@ -158,7 +160,5 @@ func createMockScript(t *testing.T, content string) string {
 
 // writeExecutableScript writes a script and makes it executable.
 func writeExecutableScript(path, content string) error {
-	// This helper will be implemented in the GREEN phase
-	// For now, this test file establishes the RED phase contract
-	return nil
+	return os.WriteFile(path, []byte(content), 0755)
 }

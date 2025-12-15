@@ -31,6 +31,7 @@ type DefaultSession struct {
 	started        bool
 	outputBuffer   strings.Builder
 	responseSignal chan struct{} // Signals when context usage is updated (response complete)
+	outputStream   io.Writer     // Optional stream for real-time output
 }
 
 // Start initializes the session with the path to AGENTS.md.
@@ -120,6 +121,11 @@ func (s *DefaultSession) readOutput(pipe io.ReadCloser) {
 		s.mu.Lock()
 		s.outputBuffer.WriteString(line)
 		s.outputBuffer.WriteString("\n")
+
+		// Stream output in real-time if writer is set
+		if s.outputStream != nil {
+			_, _ = fmt.Fprintln(s.outputStream, line)
+		}
 
 		// Parse context usage from output
 		if usage := parseContextUsage(line); usage >= 0 {
@@ -243,6 +249,14 @@ func (s *DefaultSession) IsAlive() bool {
 // Agent returns the underlying agent for this session.
 func (s *DefaultSession) Agent() agent.Agent {
 	return s.agent
+}
+
+// SetOutputStream sets the writer for real-time output streaming.
+// Pass nil to disable streaming. Thread-safe.
+func (s *DefaultSession) SetOutputStream(w io.Writer) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.outputStream = w
 }
 
 // Close terminates the session.
