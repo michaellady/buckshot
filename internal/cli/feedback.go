@@ -74,19 +74,31 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 
 	_, _ = fmt.Fprintf(out, "Running %s in one-shot mode...\n", targetAgent.Name)
 
-	// Use RunOneShot for one-shot execution (waits for process exit)
-	result, err := session.RunOneShot(cmd.Context(), *targetAgent, prompt)
+	var result session.OneShotResult
+
+	if feedbackStreamOutput {
+		// Stream output in real-time
+		_, _ = fmt.Fprintf(out, "\n=== %s Response (streaming) ===\n", targetAgent.Name)
+		result, err = session.RunOneShotStreaming(cmd.Context(), *targetAgent, prompt, out)
+	} else {
+		// Standard non-streaming execution
+		result, err = session.RunOneShot(cmd.Context(), *targetAgent, prompt)
+	}
+
 	if err != nil {
-		// Still show output even if there was an error
-		if result.Output != "" {
+		// Still show output even if there was an error (only for non-streaming)
+		if !feedbackStreamOutput && result.Output != "" {
 			_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
 			_, _ = fmt.Fprintln(out, result.Output)
 		}
 		return fmt.Errorf("agent %s failed (exit code %d): %w", targetAgent.Name, result.ExitCode, err)
 	}
 
-	_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
-	_, _ = fmt.Fprintln(out, result.Output)
+	// Only print response header for non-streaming (streaming already printed)
+	if !feedbackStreamOutput {
+		_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
+		_, _ = fmt.Fprintln(out, result.Output)
+	}
 
 	_, _ = fmt.Fprintf(out, "\nFeedback complete.\n")
 	return nil
