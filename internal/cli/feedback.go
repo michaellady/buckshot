@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	feedbackAgent string
+	feedbackAgent        string
+	feedbackStreamOutput bool
 )
 
 var feedbackCmd = &cobra.Command{
@@ -94,5 +95,6 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 func init() {
 	feedbackCmd.Flags().StringVar(&feedbackAgent, "agent", "", "Agent to run in feedback mode (required)")
 	feedbackCmd.Flags().StringVarP(&agentsPath, "agents-path", "a", "", "Path to AGENTS.md file")
+	feedbackCmd.Flags().BoolVarP(&feedbackStreamOutput, "stream", "s", false, "Stream agent output in real-time")
 	_ = feedbackCmd.MarkFlagRequired("agent")
 }

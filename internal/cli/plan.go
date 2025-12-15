@@ -21,6 +21,7 @@ var (
 	untilConverged bool
 	saveToBead     string
 	verbose        bool
+	streamOutput   bool
 )
 
 // terminalProgressReporter implements orchestrator.ProgressReporter for terminal output.
@@ -234,4 +235,5 @@ func init() {
 	planCmd.Flags().BoolVar(&untilConverged, "until-converged", false, "Run until all agents report no changes")
 	planCmd.Flags().StringVar(&saveToBead, "save", "", "Save agent perspectives to specified bead ID")
 	planCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed progress with agent timing and beads diff")
+	planCmd.Flags().BoolVarP(&streamOutput, "stream", "s", false, "Stream agent output in real-time with beads action summary")
 }
