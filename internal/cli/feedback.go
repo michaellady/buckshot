@@ -6,11 +6,13 @@ import (
 	"github.com/michaellady/buckshot/internal/agent"
 	buckctx "github.com/michaellady/buckshot/internal/context"
 	"github.com/michaellady/buckshot/internal/session"
+	"github.com/michaellady/buckshot/internal/tracker"
 	"github.com/spf13/cobra"
 )
 
 var (
-	feedbackAgent string
+	feedbackAgent        string
+	feedbackStreamOutput bool
 )
 
 var feedbackCmd = &cobra.Command{
@@ -73,19 +75,51 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 
 	_, _ = fmt.Fprintf(out, "Running %s in one-shot mode...\n", targetAgent.Name)
 
-	// Use RunOneShot for one-shot execution (waits for process exit)
-	result, err := session.RunOneShot(cmd.Context(), *targetAgent, prompt)
+	// Set up beads tracker if streaming
+	var beadsTracker *tracker.Tracker
+	var beforeState tracker.State
+	if feedbackStreamOutput {
+		beadsTracker = tracker.NewTracker()
+		beforeJSON := runBdListJSON()
+		beforeState, _ = beadsTracker.CaptureState(beforeJSON)
+	}
+
+	var result session.OneShotResult
+
+	if feedbackStreamOutput {
+		// Stream output in real-time
+		_, _ = fmt.Fprintf(out, "\n=== %s Response (streaming) ===\n", targetAgent.Name)
+		result, err = session.RunOneShotStreaming(cmd.Context(), *targetAgent, prompt, out)
+	} else {
+		// Standard non-streaming execution
+		result, err = session.RunOneShot(cmd.Context(), *targetAgent, prompt)
+	}
+
 	if err != nil {
-		// Still show output even if there was an error
-		if result.Output != "" {
+		// Still show output even if there was an error (only for non-streaming)
+		if !feedbackStreamOutput && result.Output != "" {
 			_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
 			_, _ = fmt.Fprintln(out, result.Output)
 		}
 		return fmt.Errorf("agent %s failed (exit code %d): %w", targetAgent.Name, result.ExitCode, err)
 	}
 
-	_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
-	_, _ = fmt.Fprintln(out, result.Output)
+	// Only print response header for non-streaming (streaming already printed)
+	if !feedbackStreamOutput {
+		_, _ = fmt.Fprintf(out, "\n=== %s Response ===\n", targetAgent.Name)
+		_, _ = fmt.Fprintln(out, result.Output)
+	}
+
+	// Show beads action summary if streaming with tracker
+	if beadsTracker != nil {
+		afterJSON := runBdListJSON()
+		afterState, _ := beadsTracker.CaptureState(afterJSON)
+		changes := beadsTracker.Diff(beforeState, afterState)
+		summary := changes.FormatSummary()
+		if summary != "No changes" {
+			_, _ = fmt.Fprintf(out, "\n--- Beads Action Summary ---\n%s\n", summary)
+		}
+	}
 
 	_, _ = fmt.Fprintf(out, "\nFeedback complete.\n")
 	return nil
@@ -94,5 +128,6 @@ func runFeedback(cmd *cobra.Command, args []string) error {
 func init() {
 	feedbackCmd.Flags().StringVar(&feedbackAgent, "agent", "", "Agent to run in feedback mode (required)")
 	feedbackCmd.Flags().StringVarP(&agentsPath, "agents-path", "a", "", "Path to AGENTS.md file")
+	feedbackCmd.Flags().BoolVarP(&feedbackStreamOutput, "stream", "s", false, "Stream agent output in real-time")
 	_ = feedbackCmd.MarkFlagRequired("agent")
 }

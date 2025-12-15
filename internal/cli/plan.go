@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"os/exec"
 	"time"
 
 	"github.com/michaellady/buckshot/internal/agent"
@@ -21,6 +22,7 @@ var (
 	untilConverged bool
 	saveToBead     string
 	verbose        bool
+	streamOutput   bool
 )
 
 // terminalProgressReporter implements orchestrator.ProgressReporter for terminal output.
@@ -143,9 +145,15 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	orch.SetSessionManager(session.NewManager())
 	orch.SetContextBuilder(buckctx.NewBuilder())
 
-	// Set up progress reporter if verbose mode is enabled
-	if verbose {
+	// Set up progress reporter if verbose mode is enabled or streaming (for per-agent beads summaries)
+	if verbose || streamOutput {
 		orch.SetProgressReporter(newTerminalProgressReporter(out))
+	}
+
+	// Set up output streaming if --stream flag is set
+	if streamOutput {
+		orch.SetOutputStream(out)
+		_, _ = fmt.Fprintf(out, "Streaming enabled: agent output will appear in real-time\n")
 	}
 
 	// Set up convergence detector
@@ -227,6 +235,16 @@ func filterAgents(agents []agent.Agent, selected []string) []agent.Agent {
 	return filtered
 }
 
+// runBdListJSON runs 'bd list --json' and returns the output.
+func runBdListJSON() string {
+	cmd := exec.Command("bd", "list", "--json")
+	out, err := cmd.Output()
+	if err != nil {
+		return "[]"
+	}
+	return string(out)
+}
+
 func init() {
 	planCmd.Flags().IntVarP(&rounds, "rounds", "r", 3, "Number of planning rounds")
 	planCmd.Flags().StringVarP(&agentsPath, "agents-path", "a", "", "Path to AGENTS.md file")
@@ -234,4 +252,5 @@ func init() {
 	planCmd.Flags().BoolVar(&untilConverged, "until-converged", false, "Run until all agents report no changes")
 	planCmd.Flags().StringVar(&saveToBead, "save", "", "Save agent perspectives to specified bead ID")
 	planCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed progress with agent timing and beads diff")
+	planCmd.Flags().BoolVarP(&streamOutput, "stream", "s", false, "Stream agent output in real-time with beads action summary")
 }
